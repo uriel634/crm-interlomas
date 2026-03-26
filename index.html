@@ -1076,11 +1076,14 @@ function doLogin(userId) {
 
   // Show/hide gerente-only elements
   document.querySelectorAll('.gerente-only').forEach(el => {
-    el.style.display = isGerente ? '' : 'none';
+    // Use the element's natural display type, not blank string
+    const tag = el.tagName.toLowerCase();
+    const naturalDisplay = (tag === 'div' || tag === 'nav') ? 'flex' : 'inline-flex';
+    el.style.display = isGerente ? naturalDisplay : 'none';
   });
   // Show/hide vendedor-only elements
   document.querySelectorAll('.vendedor-only').forEach(el => {
-    el.style.display = isGerente ? 'none' : '';
+    el.style.display = isGerente ? 'none' : 'inline-flex';
   });
 
   // Pre-fill forms with vendor name
@@ -1801,10 +1804,10 @@ function updateStorageStatus() {
 }
 
 async function initApp() {
-  // STEP 1 — Show login IMMEDIATELY with default names (no waiting)
-  fillSelects();
-  buildLoginScreen();
+  // STEP 1 — Show login IMMEDIATELY — synchronous, no network needed
+  buildLoginScreen();  // uses DEFAULT_VENDORS if VENDORS not loaded yet
   document.getElementById('login-screen').style.display = 'flex';
+  fillSelects();
   setStatus('⏳ Conectando…', '#f59e0b');
 
   // STEP 2 — Load real data from Sheets in background
@@ -1841,9 +1844,17 @@ let pinLocked    = false;
 let pinUserId    = null;
 
 function buildLoginScreen() {
+  // Always show at least gerente + 3 vendedores immediately
+  // Use VENDORS if loaded, otherwise use defaults
+  const defaultVendors = [
+    {id:'v1', name:'Vendedor 1', color:'#3b82f6'},
+    {id:'v2', name:'Vendedor 2', color:'#22c55e'},
+    {id:'v3', name:'Vendedor 3', color:'#f59e0b'},
+  ];
+  const vendList = (VENDORS && VENDORS.length) ? VENDORS : defaultVendors;
   const users = [
     { id:'gerente', name:'Gerente', role:'Vista completa', color:'#1a2332', initial:'G' },
-    ...VENDORS.map(v => ({
+    ...vendList.map(v => ({
       id:v.id, name:v.name, role:'Mi pipeline · Mis comisiones',
       color:v.color, initial:v.name[0].toUpperCase()
     }))
