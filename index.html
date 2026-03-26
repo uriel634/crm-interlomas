@@ -293,11 +293,12 @@ textarea.fc{resize:vertical;min-height:70px}
     <div class="tbar-date" id="pgdate"></div>
     <div style="display:flex;align-items:center;gap:6px;margin-left:8px">
       <button class="btn btn-blue" onclick="openM('m-lead')">+ Prospecto</button>
-      <button class="btn btn-out" onclick="LS.export()" title="Exportar backup JSON" style="padding:7px 10px;font-size:16px;line-height:1">💾</button>
-      <label class="btn btn-out" style="padding:7px 10px;font-size:16px;line-height:1;cursor:pointer" title="Importar backup JSON">
+      <button class="btn btn-out gerente-only" onclick="openM('m-venta')" style="display:none">+ Venta</button>
+      <button class="btn btn-out gerente-only" onclick="LS.export()" title="Exportar backup" style="padding:7px 10px;font-size:16px;line-height:1;display:none">💾</button>
+      <label class="btn btn-out gerente-only" style="padding:7px 10px;font-size:16px;line-height:1;cursor:pointer;display:none" title="Importar backup">
         📂<input type="file" accept=".json" style="display:none" onchange="LS.import(this.files[0])">
       </label>
-      <button class="btn btn-out" onclick="LS.clear()" title="Borrar todos los datos" style="padding:7px 10px;font-size:16px;line-height:1;color:#ef4444">🗑</button>
+      <button class="btn btn-out gerente-only" onclick="LS.clear()" title="Borrar todos los datos" style="padding:7px 10px;font-size:16px;line-height:1;color:#ef4444;display:none">🗑</button>
     </div>
   </header>
 
@@ -329,7 +330,8 @@ textarea.fc{resize:vertical;min-height:70px}
       <div class="sh">
         <div class="sh-t">Pipeline de Prospectos</div>
         <div class="sh-r">
-          <select class="fc" style="width:auto;padding:5px 10px;font-size:12px" id="pip-fv" onchange="renderPipeline()">
+          <button class="btn btn-blue vendedor-only" id="btn-venta-pip" onclick="openM('m-venta')" style="display:none">+ Registrar Venta</button>
+          <select class="fc gerente-only" style="width:auto;padding:5px 10px;font-size:12px;display:none" id="pip-fv" onchange="renderPipeline()">
             <option value="all">Todos los vendedores</option>
           </select>
         </div>
@@ -339,7 +341,12 @@ textarea.fc{resize:vertical;min-height:70px}
 
     <!-- SEGUIMIENTOS -->
     <div class="page" id="page-seguimiento">
-      <div class="sh"><div class="sh-t">Centro de Seguimientos</div></div>
+      <div class="sh">
+        <div class="sh-t">Centro de Seguimientos</div>
+        <div class="sh-r">
+          <button class="btn btn-blue vendedor-only" onclick="openM('m-venta')" style="display:none">+ Registrar Venta</button>
+        </div>
+      </div>
       <div id="seg-list" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
 
@@ -402,8 +409,8 @@ textarea.fc{resize:vertical;min-height:70px}
         </div>
       </div>
 
-      <div class="sh"><div class="sh-t">Desglose Vendedor × Producto</div></div>
-      <div class="twrap" style="overflow-x:auto"><div id="cm-matrix"></div></div>
+      <div class="sh gerente-only" style="display:none"><div class="sh-t">Desglose Vendedor × Producto</div></div>
+      <div class="twrap gerente-only" style="overflow-x:auto;display:none"><div id="cm-matrix"></div></div>
     </div>
 
     <!-- CONFIG -->
@@ -1070,6 +1077,10 @@ function doLogin(userId) {
   // Show/hide gerente-only elements
   document.querySelectorAll('.gerente-only').forEach(el => {
     el.style.display = isGerente ? '' : 'none';
+  });
+  // Show/hide vendedor-only elements
+  document.querySelectorAll('.vendedor-only').forEach(el => {
+    el.style.display = isGerente ? 'none' : '';
   });
 
   // Pre-fill forms with vendor name
@@ -1790,10 +1801,15 @@ function updateStorageStatus() {
 }
 
 async function initApp() {
-  setStatus('⏳ Conectando con Google Sheets…', '#f59e0b');
+  // STEP 1 — Show login IMMEDIATELY with default names (no waiting)
+  fillSelects();
+  buildLoginScreen();
+  document.getElementById('login-screen').style.display = 'flex';
+  setStatus('⏳ Conectando…', '#f59e0b');
+
+  // STEP 2 — Load real data from Sheets in background
   try {
-    // Initialize sheets if needed, then load all data
-    await apiGet('init');
+    await apiGet('init'); // also creates _Pines sheet if missing
     const all = await apiGet('all');
 
     if (all.productos  && all.productos.length)  PRODS   = all.productos.map(p=>({...p, rate:parseFloat(p.rate)||3, price:parseFloat(p.price)||0}));
@@ -1805,16 +1821,17 @@ async function initApp() {
     if(leads.length)  nLid = Math.max(...leads.map(l=>parseInt(l.id)||0)) + 1;
     if(ventas.length) nVid = Math.max(...ventas.map(v=>parseInt(v.id)||0)) + 1;
 
-    setStatus(`✅ ${leads.length} prospectos · ${ventas.length} ventas cargados`, '#22c55e');
+    // Rebuild login with real vendor names from Sheets
+    fillSelects();
+    buildLoginScreen();
+    setStatus('✅ Listo · ' + leads.length + ' prospectos', '#22c55e');
   } catch(e) {
-    console.warn('initApp: no se pudo conectar a Sheets, usando datos locales.', e);
-    setStatus('⚠️ Sin conexión — datos de ejemplo', '#f59e0b');
+    console.warn('Sin conexión a Sheets:', e);
+    setStatus('⚠️ Sin conexión', '#f59e0b');
   }
 
-  fillSelects(); badges(); updateStorageStatus();
+  badges(); updateStorageStatus();
   addRow();
-  buildLoginScreen();
-  document.getElementById('login-screen').style.display = 'flex';
 }
 
 // ── PIN SYSTEM ───────────────────────────────────────────
@@ -1965,10 +1982,33 @@ async function validatePin() {
       }
     }
   } catch(e) {
-    // Network error — fail safely
-    document.getElementById('pin-error').textContent = '⚠️ Sin conexión. Verifica internet.';
-    pinBuffer = '';
-    setTimeout(()=>updatePinDots(), 500);
+    // Network error — try local fallback with default PINs
+    const defaultPins = { gerente:'0000', v1:'1111', v2:'2222', v3:'3333' };
+    const localPin = defaultPins[pinUserId];
+    if (localPin && pinBuffer === localPin) {
+      // Allow entry with default PIN when offline
+      [1,2,3,4].forEach(i => {
+        const d = document.getElementById('pd'+i);
+        if (d) { d.classList.remove('filled'); d.style.background='#f59e0b'; }
+      });
+      document.getElementById('pin-error').textContent = '⚠️ Modo sin conexión';
+      setTimeout(() => {
+        [1,2,3,4].forEach(i => {
+          const d = document.getElementById('pd'+i);
+          if (d) d.style.background = '';
+        });
+        doLogin(pinUserId);
+      }, 600);
+    } else {
+      pinAttempts++;
+      pinBuffer = '';
+      document.getElementById('pin-error').textContent = '⚠️ Sin conexión a internet';
+      [1,2,3,4].forEach(i => {
+        const d = document.getElementById('pd'+i);
+        if (d) { d.classList.add('error'); setTimeout(()=>d.classList.remove('error','filled'),500); }
+      });
+      setTimeout(()=>updatePinDots(), 500);
+    }
   }
 }
 
