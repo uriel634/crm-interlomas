@@ -335,12 +335,18 @@ textarea.fc{resize:vertical;min-height:70px}
     <div class="tbar-title" id="pgtitle">Dashboard</div>
     <div class="tbar-date" id="pgdate"></div>
     <!-- Global search -->
-    <div style="position:relative;flex:1;max-width:280px;margin:0 8px">
-      <input id="global-search" class="srch" placeholder="🔍 Buscar cliente, prospecto…"
-        oninput="globalSearch(this.value)"
-        style="width:100%;padding-left:12px;font-size:12px"
-        autocomplete="off">
-      <div id="search-results" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:200;max-height:300px;overflow-y:auto"></div>
+    <div style="position:relative;flex:1;max-width:320px;margin:0 8px">
+      <div style="position:relative">
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px;pointer-events:none">🔍</span>
+        <input id="global-search" class="srch"
+          placeholder="Buscar cliente, venta, pedido…"
+          oninput="globalSearch(this.value);var b=document.getElementById('search-clear');if(b)b.style.display=this.value?'block':'none'"
+          onkeydown="searchKeyNav(event)"
+          style="width:100%;padding:8px 10px 8px 32px;font-size:12px;border-radius:8px"
+          autocomplete="off">
+        <button id="search-clear" onclick="closeSearch()" style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;font-size:14px;padding:2px">✕</button>
+      </div>
+      <div id="search-results" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.15);z-index:200;max-height:380px;overflow-y:auto"></div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap">
       <button class="btn btn-blue" onclick="openM('m-lead')">+ Prospecto</button>
@@ -361,10 +367,19 @@ textarea.fc{resize:vertical;min-height:70px}
         <div class="sh-t">Resumen Ejecutivo</div>
         <div class="sh-r">
           <select class="fc" style="width:auto;padding:5px 10px;font-size:12px" id="d-mes" onchange="rDash()">
-            <option value="all">Todo Q1 2026</option>
+            <option value="all">Todo el año</option>
             <option value="1">Enero</option>
             <option value="2">Febrero</option>
             <option value="3">Marzo</option>
+            <option value="4">Abril</option>
+            <option value="5">Mayo</option>
+            <option value="6">Junio</option>
+            <option value="7">Julio</option>
+            <option value="8">Agosto</option>
+            <option value="9">Septiembre</option>
+            <option value="10">Octubre</option>
+            <option value="11">Noviembre</option>
+            <option value="12">Diciembre</option>
           </select>
         </div>
       </div>
@@ -393,10 +408,19 @@ textarea.fc{resize:vertical;min-height:70px}
         <div class="sh-t">Pipeline de Prospectos</div>
         <div class="sh-r">
           <select class="fc" style="width:auto;padding:5px 10px;font-size:12px" id="pip-mes" onchange="renderPipeline()">
-            <option value="all">Todo Q1 2026</option>
+            <option value="all">Todo el año</option>
             <option value="1">Enero</option>
             <option value="2">Febrero</option>
             <option value="3">Marzo</option>
+            <option value="4">Abril</option>
+            <option value="5">Mayo</option>
+            <option value="6">Junio</option>
+            <option value="7">Julio</option>
+            <option value="8">Agosto</option>
+            <option value="9">Septiembre</option>
+            <option value="10">Octubre</option>
+            <option value="11">Noviembre</option>
+            <option value="12">Diciembre</option>
           </select>
           <select class="fc gerente-only" style="width:auto;padding:5px 10px;font-size:12px;display:none" id="pip-fv" onchange="renderPipeline()">
             <option value="all">Todos los vendedores</option>
@@ -2797,7 +2821,7 @@ function globalSearch(q){
     html+='<div style="padding:7px 12px 4px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Prospectos</div>';
     html+=matchLeads.map(function(l){
       var s=si(l.stage);
-      return '<div onclick="closeSearch();openDet('+l.id+')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-top:1px solid #f1f5f9" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">'+
+      return '<div onclick="searchSelectLead('+l.id+')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-top:1px solid #f1f5f9" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">'+
         '<div style="width:28px;height:28px;border-radius:50%;background:'+s.color+'20;color:'+s.color+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">'+l.nombre[0].toUpperCase()+'</div>'+
         '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+l.nombre+'</div>'+
         '<div style="font-size:10px;color:#94a3b8">'+s.label+' · '+(l.vendedor||'')+'</div></div>'+
@@ -2823,11 +2847,64 @@ function globalSearch(q){
   box.style.display='block';
 }
 
+function searchSelectLead(id){
+  closeSearch();
+  var ni=document.querySelector('.ni[onclick*="pipeline"]');
+  go('pipeline',ni);
+  setTimeout(function(){openDet(id);},350);
+}
+
+function searchSelectVenta(vid){
+  closeSearch();
+  var v=ventas.find(function(x){return x.id===vid;});
+  if(!v)return;
+  var ni=document.querySelector('.ni[onclick*="ventas"]');
+  go('ventas',ni);
+  setTimeout(function(){
+    var srch=document.getElementById('v-srch');
+    if(srch){srch.value=v.cliente;rVentas();}
+  },350);
+}
+
 function closeSearch(){
   var box=document.getElementById('search-results');
   var inp=document.getElementById('global-search');
+  var btn=document.getElementById('search-clear');
   if(box)box.style.display='none';
   if(inp)inp.value='';
+  if(btn)btn.style.display='none';
+}
+
+function searchKeyNav(e){
+  var box=document.getElementById('search-results');
+  var btn=document.getElementById('search-clear');
+  var inp=document.getElementById('global-search');
+  // Show/hide clear button
+  if(btn)btn.style.display=inp&&inp.value.length?'block':'none';
+  if(!box||box.style.display==='none')return;
+  var items=box.querySelectorAll('.sr-item');
+  var cur=box.querySelector('.sr-item.focused');
+  if(e.key==='Escape'){closeSearch();return;}
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    var next=cur?cur.nextElementSibling:items[0];
+    while(next&&!next.classList.contains('sr-item'))next=next.nextElementSibling;
+    if(cur)cur.classList.remove('focused');
+    if(next){next.classList.add('focused');next.style.background='#eff6ff';}
+    return;
+  }
+  if(e.key==='ArrowUp'){
+    e.preventDefault();
+    var prev=cur?cur.previousElementSibling:items[items.length-1];
+    while(prev&&!prev.classList.contains('sr-item'))prev=prev.previousElementSibling;
+    if(cur)cur.classList.remove('focused');
+    if(prev){prev.classList.add('focused');prev.style.background='#eff6ff';}
+    return;
+  }
+  if(e.key==='Enter'&&cur){
+    e.preventDefault();
+    cur.click();
+  }
 }
 
 // ── SEGUIMIENTOS BANNER ───────────────────────────────────
