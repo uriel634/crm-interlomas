@@ -293,12 +293,11 @@ textarea.fc{resize:vertical;min-height:70px}
     <div class="tbar-date" id="pgdate"></div>
     <div style="display:flex;align-items:center;gap:6px;margin-left:8px">
       <button class="btn btn-blue" onclick="openM('m-lead')">+ Prospecto</button>
-      <button class="btn btn-out gerente-only" onclick="openM('m-venta')" style="display:none">+ Venta</button>
-      <button class="btn btn-out gerente-only" onclick="LS.export()" title="Exportar backup" style="padding:7px 10px;font-size:16px;line-height:1;display:none">💾</button>
-      <label class="btn btn-out gerente-only" style="padding:7px 10px;font-size:16px;line-height:1;cursor:pointer;display:none" title="Importar backup">
+      <button class="btn btn-out" onclick="LS.export()" title="Exportar backup JSON" style="padding:7px 10px;font-size:16px;line-height:1">💾</button>
+      <label class="btn btn-out" style="padding:7px 10px;font-size:16px;line-height:1;cursor:pointer" title="Importar backup JSON">
         📂<input type="file" accept=".json" style="display:none" onchange="LS.import(this.files[0])">
       </label>
-      <button class="btn btn-out gerente-only" onclick="LS.clear()" title="Borrar todos los datos" style="padding:7px 10px;font-size:16px;line-height:1;color:#ef4444;display:none">🗑</button>
+      <button class="btn btn-out" onclick="LS.clear()" title="Borrar todos los datos" style="padding:7px 10px;font-size:16px;line-height:1;color:#ef4444">🗑</button>
     </div>
   </header>
 
@@ -306,17 +305,6 @@ textarea.fc{resize:vertical;min-height:70px}
 
     <!-- DASHBOARD -->
     <div class="page on" id="page-dashboard">
-      <div class="sh" style="margin-bottom:16px">
-        <div class="sh-t">Resumen Ejecutivo</div>
-        <div class="sh-r">
-          <select class="fc" style="width:auto;padding:5px 10px;font-size:12px" id="d-mes" onchange="rDash()">
-            <option value="all">Todo Q1 2026</option>
-            <option value="1">Enero</option>
-            <option value="2">Febrero</option>
-            <option value="3">Marzo</option>
-          </select>
-        </div>
-      </div>
       <div class="kgrid" id="d-kpis"></div>
       <div class="twocol">
         <div>
@@ -341,13 +329,7 @@ textarea.fc{resize:vertical;min-height:70px}
       <div class="sh">
         <div class="sh-t">Pipeline de Prospectos</div>
         <div class="sh-r">
-          <select class="fc" style="width:auto;padding:5px 10px;font-size:12px" id="pip-mes" onchange="renderPipeline()">
-            <option value="all">Todo Q1 2026</option>
-            <option value="1">Enero</option>
-            <option value="2">Febrero</option>
-            <option value="3">Marzo</option>
-          </select>
-          <select class="fc gerente-only" style="width:auto;padding:5px 10px;font-size:12px;display:none" id="pip-fv" onchange="renderPipeline()">
+          <select class="fc" style="width:auto;padding:5px 10px;font-size:12px" id="pip-fv" onchange="renderPipeline()">
             <option value="all">Todos los vendedores</option>
           </select>
         </div>
@@ -357,17 +339,7 @@ textarea.fc{resize:vertical;min-height:70px}
 
     <!-- SEGUIMIENTOS -->
     <div class="page" id="page-seguimiento">
-      <div class="sh">
-        <div class="sh-t">Centro de Seguimientos</div>
-        <div class="sh-r">
-          <select class="fc" style="width:auto;padding:5px 10px;font-size:12px" id="seg-estado" onchange="rSeg()">
-            <option value="all">Todos</option>
-            <option value="vencido">⚠ Vencidos</option>
-            <option value="hoy">🟡 Hoy</option>
-            <option value="proximos">🟢 Próximos 7 días</option>
-          </select>
-        </div>
-      </div>
+      <div class="sh"><div class="sh-t">Centro de Seguimientos</div></div>
       <div id="seg-list" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
 
@@ -377,17 +349,12 @@ textarea.fc{resize:vertical;min-height:70px}
       <div class="sh">
         <div class="sh-t">Registro de Ventas</div>
         <div class="sh-r">
-          <select class="fc" style="width:auto;padding:5px 10px;font-size:12px" id="v-fil" onchange="rVentas()">
-            <option value="all">Todo Q1 2026</option>
-            <option value="1">Enero</option>
-            <option value="2">Febrero</option>
-            <option value="3">Marzo</option>
+          <select class="fc" style="width:auto;padding:5px 10px;font-size:12px" id="v-fil" onchange="renderVentas()">
+            <option value="all">Todo el período</option>
             <option value="week">Esta semana</option>
+            <option value="month">Este mes</option>
           </select>
-          <select class="fc gerente-only" style="width:auto;padding:5px 10px;font-size:12px;display:none" id="v-vend-fil" onchange="rVentas()">
-            <option value="all">Todos los vendedores</option>
-          </select>
-          <button class="btn btn-blue gerente-only" style="display:none" onclick="openM('m-venta')">+ Venta</button>
+          <button class="btn btn-blue" onclick="openM('m-venta')">+ Venta</button>
         </div>
       </div>
       <div class="twrap">
@@ -409,10 +376,7 @@ textarea.fc{resize:vertical;min-height:70px}
       <div class="sh">
         <div class="sh-t">Reporte de Comisiones</div>
         <div class="sh-r">
-          <select class="fc gerente-only" style="width:auto;padding:5px 10px;font-size:12px;display:none" id="cm-vend-fil" onchange="rComisiones()">
-            <option value="all">Todos los vendedores</option>
-          </select>
-          <select class="fc" style="width:auto;padding:5px 10px;font-size:12px" id="cm-mes" onchange="rComisiones()">
+          <select class="fc" style="width:auto;padding:5px 10px;font-size:12px" id="cm-mes" onchange="renderComisiones()">
             <option value="all">Todo 2026</option>
             <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
             <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
@@ -438,8 +402,8 @@ textarea.fc{resize:vertical;min-height:70px}
         </div>
       </div>
 
-      <div class="sh gerente-only" style="display:none"><div class="sh-t">Desglose Vendedor × Producto</div></div>
-      <div class="twrap gerente-only" style="overflow-x:auto;display:none"><div id="cm-matrix"></div></div>
+      <div class="sh"><div class="sh-t">Desglose Vendedor × Producto</div></div>
+      <div class="twrap" style="overflow-x:auto"><div id="cm-matrix"></div></div>
     </div>
 
     <!-- CONFIG -->
@@ -673,32 +637,6 @@ textarea.fc{resize:vertical;min-height:70px}
     </div>
 
   </div>
-</div>
-
-<!-- FLOATING VENTA BUTTON — vendedor only -->
-<div id="float-venta" style="
-  display:none;
-  position:fixed;
-  bottom:80px;
-  right:20px;
-  z-index:90;">
-  <button onclick="openM('m-venta')" style="
-    background:#22c55e;
-    color:#fff;
-    border:none;
-    border-radius:50px;
-    padding:14px 22px;
-    font-size:14px;
-    font-weight:700;
-    font-family:'Plus Jakarta Sans',sans-serif;
-    box-shadow:0 4px 20px rgba(34,197,94,.4);
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    gap:8px;
-    transition:all .2s;">
-    💰 Registrar Venta
-  </button>
 </div>
 
 <!-- MODAL: PROSPECTO -->
@@ -1131,18 +1069,8 @@ function doLogin(userId) {
 
   // Show/hide gerente-only elements
   document.querySelectorAll('.gerente-only').forEach(el => {
-    // Use the element's natural display type, not blank string
-    const tag = el.tagName.toLowerCase();
-    const naturalDisplay = (tag === 'div' || tag === 'nav') ? 'flex' : 'inline-flex';
-    el.style.display = isGerente ? naturalDisplay : 'none';
+    el.style.display = isGerente ? '' : 'none';
   });
-  // Show/hide vendedor-only elements
-  document.querySelectorAll('.vendedor-only').forEach(el => {
-    el.style.display = isGerente ? 'none' : 'inline-flex';
-  });
-  // Show/hide floating venta button
-  const floatBtn = document.getElementById('float-venta');
-  if (floatBtn) floatBtn.style.display = isGerente ? 'none' : 'block';
 
   // Pre-fill forms with vendor name
   if (!isGerente) {
@@ -1167,26 +1095,19 @@ function doLogin(userId) {
   go(defaultPage, firstNav);
 
   fillSelects();
-  // Populate vendor filters
-  const vendOpts = VENDORS.map(v=>`<option value="${v.name}">${v.name}</option>`).join('');
-  ['v-vend-fil','cm-vend-fil'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el && el.options.length<=1) el.innerHTML='<option value="all">Todos los vendedores</option>'+vendOpts;
-  });
   badges();
 }
 
 function doLogout() {
   CU = null;
+  // Re-enable selects
   ['l-vend','v-vend'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = false;
   });
-  // Hide floating button
-  const fb = document.getElementById('float-venta');
-  if (fb) fb.style.display = 'none';
-  // Reset nav
+  // Show all nav items temporarily
   document.querySelectorAll('.gerente-only').forEach(el => el.style.display = '');
+  // Show login screen
   document.getElementById('login-screen').style.display = 'flex';
 }
 
@@ -1220,13 +1141,7 @@ function fillSelects(){
 
 // ═══════ DASHBOARD ═══════
 function rDash(){
-  // Period filter
-  const dMes = document.getElementById('d-mes')?.value || 'all';
-  const mv0  = myventas();
-  const mv   = dMes==='all' ? mv0 : mv0.filter(v=>{const d=new Date(v.fecha);return d.getMonth()+1===parseInt(dMes)&&d.getFullYear()===2026;});
-  const ml0  = myleads();
-  const ml   = dMes==='all' ? ml0 : ml0;
-  const td   = today();
+  const mv=myventas(),ml=myleads(),td=today();
   const tv=mv.reduce((s,v)=>s+v.total,0),tc=mv.reduce((s,v)=>s+v.cobrado,0);
   const tcom=mv.reduce((s,v)=>s+v.comision,0);
   const act=ml.filter(l=>l.stage!=='cierre').length;
@@ -1279,14 +1194,12 @@ function rDash(){
 
 // ═══════ PIPELINE ═══════
 function rPipeline(){
-  const fv   = document.getElementById('pip-fv')?.value||'all';
-  const pMes = document.getElementById('pip-mes')?.value||'all';
-  let ml = myleads();
-  if(fv!=='all') ml=ml.filter(l=>l.vendedor===fv);
-  if(pMes!=='all') ml=ml.filter(l=>l.fecha&&new Date(l.fecha).getMonth()+1===parseInt(pMes)&&new Date(l.fecha).getFullYear()===2026);
+  const fv=document.getElementById('pip-fv')?.value||'all';
+  let ml=myleads();
+  if(fv!=='all')ml=ml.filter(l=>l.vendedor===fv);
   // Vendedor selector only visible to gerente
   const pfv=document.getElementById('pip-fv');
-  if(pfv) pfv.style.display = CU==='gerente' ? '' : 'none';
+  if(pfv) pfv.parentElement.style.display = CU==='gerente' ? '' : 'none';
   const td=today();
   document.getElementById('kanban').innerHTML=STAGES.map(s=>{
     const cards=ml.filter(l=>l.stage===s.key);
@@ -1312,15 +1225,8 @@ function rPipeline(){
 
 // ═══════ SEGUIMIENTOS ═══════
 function rSeg(){
-  const td     = today();
-  const estado = document.getElementById('seg-estado')?.value || 'all';
-  const d7     = new Date(); d7.setDate(d7.getDate()+7);
-  const d7str  = d7.toISOString().split('T')[0];
-  let ml = myleads().filter(l=>l.followup);
-  if(estado==='vencido')  ml=ml.filter(l=>l.followup<td&&l.stage!=='cierre');
-  if(estado==='hoy')      ml=ml.filter(l=>l.followup===td);
-  if(estado==='proximos') ml=ml.filter(l=>l.followup>td&&l.followup<=d7str);
-  ml=ml.sort((a,b)=>a.followup.localeCompare(b.followup));
+  const ml=myleads().filter(l=>l.followup).sort((a,b)=>a.followup.localeCompare(b.followup));
+  const td=today();
   document.getElementById('seg-list').innerHTML=ml.length?ml.map(l=>{
     const d=ddiff(l.followup),ov=l.followup<td,to=l.followup===td;
     const s=si(l.stage);
@@ -1349,19 +1255,12 @@ function rVKpis(){
 }
 
 function rVentas(){
-  const fil   = document.getElementById('v-fil')?.value || 'all';
-  const vFil  = document.getElementById('v-vend-fil')?.value || 'all';
-  const srch  = (document.getElementById('v-srch')?.value||'').toLowerCase();
-  let data    = myventas();
-  // Month filter
-  if(['1','2','3'].includes(fil)){
-    const m=parseInt(fil);
-    data=data.filter(v=>{const d=new Date(v.fecha);return d.getMonth()+1===m&&d.getFullYear()===2026;});
-  }
+  const fil=document.getElementById('v-fil').value;
+  const srch=(document.getElementById('v-srch').value||'').toLowerCase();
+  let data=myventas();
   if(fil==='week'){const d=new Date();d.setDate(d.getDate()-7);data=data.filter(v=>new Date(v.fecha)>=d);}
-  // Vendedor filter (gerente only)
-  if(vFil!=='all') data=data.filter(v=>v.vendedor===vFil);
-  if(srch) data=data.filter(v=>v.cliente.toLowerCase().includes(srch)||v.pedido.toLowerCase().includes(srch));
+  if(fil==='month'){const n=new Date();data=data.filter(v=>{const d=new Date(v.fecha);return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();});}
+  if(srch)data=data.filter(v=>v.cliente.toLowerCase().includes(srch)||v.pedido.toLowerCase().includes(srch));
   document.getElementById('v-tbody').innerHTML=data.length?data.map(v=>{
     const sl=v.total-v.cobrado,rate=pRate(v.producto);
     return `<tr>
@@ -1382,11 +1281,9 @@ function rVentas(){
 
 // ═══════ COMISIONES ═══════
 function rComisiones(){
-  const mes   = document.getElementById('cm-mes')?.value || 'all';
-  const cVend = document.getElementById('cm-vend-fil')?.value || 'all';
-  let data    = myventas();
+  const mes=document.getElementById('cm-mes').value;
+  let data=myventas();
   if(mes!=='all'){const m=parseInt(mes);data=data.filter(v=>{const d=new Date(v.fecha);return d.getMonth()+1===m&&d.getFullYear()===2026;});}
-  if(cVend!=='all') data=data.filter(v=>v.vendedor===cVend);
 
   const tv=data.reduce((s,v)=>s+v.total,0),tcom=data.reduce((s,v)=>s+v.comision,0);
   const cuotaT=VENDORS.reduce((s,v)=>s+v.cuota,0);
@@ -1893,15 +1790,10 @@ function updateStorageStatus() {
 }
 
 async function initApp() {
-  // STEP 1 — Show login IMMEDIATELY — synchronous, no network needed
-  buildLoginScreen();  // uses DEFAULT_VENDORS if VENDORS not loaded yet
-  document.getElementById('login-screen').style.display = 'flex';
-  fillSelects();
-  setStatus('⏳ Conectando…', '#f59e0b');
-
-  // STEP 2 — Load real data from Sheets in background
+  setStatus('⏳ Conectando con Google Sheets…', '#f59e0b');
   try {
-    await apiGet('init'); // also creates _Pines sheet if missing
+    // Initialize sheets if needed, then load all data
+    await apiGet('init');
     const all = await apiGet('all');
 
     if (all.productos  && all.productos.length)  PRODS   = all.productos.map(p=>({...p, rate:parseFloat(p.rate)||3, price:parseFloat(p.price)||0}));
@@ -1913,17 +1805,16 @@ async function initApp() {
     if(leads.length)  nLid = Math.max(...leads.map(l=>parseInt(l.id)||0)) + 1;
     if(ventas.length) nVid = Math.max(...ventas.map(v=>parseInt(v.id)||0)) + 1;
 
-    // Rebuild login with real vendor names from Sheets
-    fillSelects();
-    buildLoginScreen();
-    setStatus('✅ Listo · ' + leads.length + ' prospectos', '#22c55e');
+    setStatus(`✅ ${leads.length} prospectos · ${ventas.length} ventas cargados`, '#22c55e');
   } catch(e) {
-    console.warn('Sin conexión a Sheets:', e);
-    setStatus('⚠️ Sin conexión', '#f59e0b');
+    console.warn('initApp: no se pudo conectar a Sheets, usando datos locales.', e);
+    setStatus('⚠️ Sin conexión — datos de ejemplo', '#f59e0b');
   }
 
-  badges(); updateStorageStatus();
+  fillSelects(); badges(); updateStorageStatus();
   addRow();
+  buildLoginScreen();
+  document.getElementById('login-screen').style.display = 'flex';
 }
 
 // ── PIN SYSTEM ───────────────────────────────────────────
@@ -1933,17 +1824,9 @@ let pinLocked    = false;
 let pinUserId    = null;
 
 function buildLoginScreen() {
-  // Always show at least gerente + 3 vendedores immediately
-  // Use VENDORS if loaded, otherwise use defaults
-  const defaultVendors = [
-    {id:'v1', name:'Vendedor 1', color:'#3b82f6'},
-    {id:'v2', name:'Vendedor 2', color:'#22c55e'},
-    {id:'v3', name:'Vendedor 3', color:'#f59e0b'},
-  ];
-  const vendList = (VENDORS && VENDORS.length) ? VENDORS : defaultVendors;
   const users = [
     { id:'gerente', name:'Gerente', role:'Vista completa', color:'#1a2332', initial:'G' },
-    ...vendList.map(v => ({
+    ...VENDORS.map(v => ({
       id:v.id, name:v.name, role:'Mi pipeline · Mis comisiones',
       color:v.color, initial:v.name[0].toUpperCase()
     }))
@@ -2082,33 +1965,10 @@ async function validatePin() {
       }
     }
   } catch(e) {
-    // Network error — try local fallback with default PINs
-    const defaultPins = { gerente:'0000', v1:'1111', v2:'2222', v3:'3333' };
-    const localPin = defaultPins[pinUserId];
-    if (localPin && pinBuffer === localPin) {
-      // Allow entry with default PIN when offline
-      [1,2,3,4].forEach(i => {
-        const d = document.getElementById('pd'+i);
-        if (d) { d.classList.remove('filled'); d.style.background='#f59e0b'; }
-      });
-      document.getElementById('pin-error').textContent = '⚠️ Modo sin conexión';
-      setTimeout(() => {
-        [1,2,3,4].forEach(i => {
-          const d = document.getElementById('pd'+i);
-          if (d) d.style.background = '';
-        });
-        doLogin(pinUserId);
-      }, 600);
-    } else {
-      pinAttempts++;
-      pinBuffer = '';
-      document.getElementById('pin-error').textContent = '⚠️ Sin conexión a internet';
-      [1,2,3,4].forEach(i => {
-        const d = document.getElementById('pd'+i);
-        if (d) { d.classList.add('error'); setTimeout(()=>d.classList.remove('error','filled'),500); }
-      });
-      setTimeout(()=>updatePinDots(), 500);
-    }
+    // Network error — fail safely
+    document.getElementById('pin-error').textContent = '⚠️ Sin conexión. Verifica internet.';
+    pinBuffer = '';
+    setTimeout(()=>updatePinDots(), 500);
   }
 }
 
