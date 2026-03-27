@@ -1150,8 +1150,9 @@ async function doClearData() {
     // Send empty arrays to Sheets — NOT demo data
     await apiPost('full_backup', { prospectos:[], ventas:[], productos:PRODS, vendedores:VENDORS });
     // Clear memory
-    leads=[]; ventas=[]; pagos=[]; activity=[]; loadLog=[];
-    nLid=1; nVid=1;
+    leads=[]; ventas=JSON.parse(JSON.stringify(DEFAULT_VENTAS)); pagos=[]; activity=[]; loadLog=[];
+    nLid=1; nVid=7;
+    rebuildPagosFromVentas();
     fillSelects(); badges();
     render(document.querySelector('.page.on')?.id?.replace('page-','')||'dashboard');
     updateStorageStatus();
@@ -1173,6 +1174,10 @@ async function importBackupFile(file) {
       if (data.activity) activity= data.activity;
       if (leads.length)  nLid = Math.max(...leads.map(function(l){return l.id;})) + 1;
       if (ventas.length) nVid = Math.max(...ventas.map(function(v){return v.id;})) + 1;
+      // Rebuild pagos from venta.cobrado if backup has no pagos
+      if((!data.pagos||!data.pagos.length) && ventas.length > 0){
+        rebuildPagosFromVentas();
+      }
       setStatus('⏳ Subiendo backup a Google Sheets…', '#f59e0b');
       await apiPost('full_backup', { prospectos:leads, ventas:ventas, productos:PRODS, vendedores:VENDORS });
       fillSelects(); badges();
@@ -1301,12 +1306,12 @@ const DEFAULT_LEADS = [
   {id:6,nombre:'Ing. Rodríguez', tel:'55-3333-8888',medio:'Llamada',      vendedor:'Vendedor 3',producto:'Piedra Natural',   monto:180000,stage:'cierre',     obs:'Lista para firmar',        followup:'2026-03-21',fecha:'2026-03-05'},
 ];
 const DEFAULT_VENTAS = [
-  {id:1,fecha:'2026-03-05',cliente:'Fam. Torres',     vendedor:'Vendedor 1',producto:'Piso Porcelánico',  total:92000, cobrado:92000, pedido:'PED-001',metodo:'Transferencia',notas:'',comision:2760},
-  {id:2,fecha:'2026-03-08',cliente:'Diseñadora Paula',vendedor:'Vendedor 2',producto:'Baño Completo',     total:145000,cobrado:72500, pedido:'PED-002',metodo:'Cheque',        notas:'50% anticipo',comision:7250},
-  {id:3,fecha:'2026-03-10',cliente:'Const. JMSA',     vendedor:'Vendedor 1',producto:'Piso Madera',       total:68000, cobrado:68000, pedido:'PED-003',metodo:'Transferencia',notas:'',comision:2380},
-  {id:4,fecha:'2026-03-12',cliente:'Arq. Vega',       vendedor:'Vendedor 3',producto:'Piedra Natural',    total:210000,cobrado:105000,pedido:'PED-004',metodo:'Transferencia',notas:'Residencial',comision:8400},
-  {id:5,fecha:'2026-03-15',cliente:'SPA Wellness',    vendedor:'Vendedor 2',producto:'Mosaico Vítreo',    total:55000, cobrado:55000, pedido:'PED-005',metodo:'Efectivo',      notas:'',comision:1925},
-  {id:6,fecha:'2026-03-18',cliente:'Cocinas Express', vendedor:'Vendedor 3',producto:'Cocina Integral',   total:320000,cobrado:160000,pedido:'PED-006',metodo:'Transferencia',notas:'4 cocinas',comision:16000},
+  {id:1,fecha:'2026-03-05',cliente:'Fam. Torres',     vendedor:'Vendedor 1',producto:'Piso Porcelánico', lista:'l1',moneda:'MXN',tc:1,total:92000, totalMxn:92000, cobrado:92000, cobradoMxn:92000, pedido:'PED-001',metodo:'Transferencia',notas:'',comision:3966},
+  {id:2,fecha:'2026-03-08',cliente:'Diseñadora Paula',vendedor:'Vendedor 2',producto:'Baño Completo',    lista:'l2',moneda:'MXN',tc:1,total:145000,totalMxn:145000,cobrado:72500, cobradoMxn:72500, pedido:'PED-002',metodo:'Cheque',        notas:'50% anticipo',comision:3125},
+  {id:3,fecha:'2026-03-10',cliente:'Const. JMSA',     vendedor:'Vendedor 1',producto:'Piso Madera',      lista:'l1',moneda:'MXN',tc:1,total:68000, totalMxn:68000, cobrado:68000, cobradoMxn:68000, pedido:'PED-003',metodo:'Transferencia',notas:'',comision:2931},
+  {id:4,fecha:'2026-03-15',cliente:'SPA Wellness',    vendedor:'Vendedor 2',producto:'Mosaico Vítreo',   lista:'l1',moneda:'MXN',tc:1,total:55000, totalMxn:55000, cobrado:55000, cobradoMxn:55000, pedido:'PED-004',metodo:'Transferencia',notas:'Proyecto terminado',comision:2371},
+  {id:5,fecha:'2026-03-20',cliente:'Arq. Roberto',    vendedor:'Vendedor 3',producto:'Piedra Natural',   lista:'l2',moneda:'MXN',tc:1,total:210000,totalMxn:210000,cobrado:105000,cobradoMxn:105000,pedido:'PED-005',metodo:'Transferencia',notas:'50% anticipo',comision:4526},
+  {id:6,fecha:'2026-03-22',cliente:'Cocinas Express', vendedor:'Vendedor 1',producto:'Cocina Integral',  lista:'l3',moneda:'MXN',tc:1,total:320000,totalMxn:320000,cobrado:320000,cobradoMxn:320000,pedido:'PED-006',metodo:'Transferencia',notas:'Proyecto VIP',comision:13793},
 ];
 const DEFAULT_ACTIVITY = [
   {text:'<strong>Vendedor 2</strong> movió <strong>Claudia Ramos</strong> a Negociación', time:'Hace 2h',color:'#3b82f6'},
@@ -1329,6 +1334,32 @@ const ddiff = d=>Math.round((new Date()-new Date(d))/86400000);
 const si = k=>STAGES.find(s=>s.key===k)||STAGES[0];
 const vc = n=>{const v=VENDORS.find(x=>x.name===n);return v?v.color:'#3b82f6';}
 const pRate = n=>{const p=PRODS.find(x=>x.name===n);return p?p.rate/100:0.03;}
+
+// ── PAGOS REBUILD from legacy venta.cobrado ──────────────
+function rebuildPagosFromVentas(){
+  var newPagos = [];
+  ventas.forEach(function(v){
+    var cobMxn = parseFloat(v.cobradoMxn||v.cobrado||0);
+    if(cobMxn > 0){
+      var lista = v.lista||'l1';
+      var rate  = (LISTA_RATES&&LISTA_RATES[lista])||5;
+      var com   = v.comision>0 ? parseFloat(v.comision) : Math.round((cobMxn/1.16)*(rate/100));
+      newPagos.push({
+        id:         'leg_'+v.id,
+        ventaId:    v.id,
+        fecha:      v.fecha||today(),
+        monto:      parseFloat(v.cobrado||cobMxn),
+        moneda:     v.moneda||'MXN',
+        tc:         parseFloat(v.tc)||1,
+        montoMxn:   cobMxn,
+        metodo:     v.metodo||'Transferencia',
+        referencia: v.referencia||'',
+        comision:   com
+      });
+    }
+  });
+  pagos = newPagos;
+}
 
 function myleads(){
   if(CU==='gerente')return leads;
@@ -2677,6 +2708,8 @@ async function initApp() {
 
     if(leads.length)  nLid = Math.max(...leads.map(l=>parseInt(l.id)||0)) + 1;
     if(ventas.length) nVid = Math.max(...ventas.map(v=>parseInt(v.id)||0)) + 1;
+    // Rebuild pagos from venta.cobrado if none loaded from Sheets
+    if(pagos.length === 0 && ventas.length > 0){ rebuildPagosFromVentas(); }
 
     // Rebuild login with real vendor names from Sheets
     fillSelects();
