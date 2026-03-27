@@ -229,53 +229,94 @@ textarea.fc{resize:vertical;min-height:70px}
 .pin-key:active{transform:scale(.95)}
 
 @media(max-width:768px){
+  /* Layout */
   .sidebar{display:none}
   .mobnav{display:block}
-  .content{padding:12px;padding-bottom:78px}
+  .content{padding:10px;padding-bottom:80px}
+  .shell{flex-direction:column}
+
+  /* Topbar */
+  .topbar{padding:8px 12px;gap:5px;flex-wrap:wrap;min-height:auto}
+  .tbar-title{font-size:13px;font-weight:800}
+  .tbar-date{display:none}
+  #global-search{max-width:160px}
+
+  /* KPI grid */
   .kgrid{grid-template-columns:1fr 1fr;gap:8px}
-  .kc .kv{font-size:16px}
+  .kc{padding:10px 12px}.kc .kv{font-size:16px}.kc .kl{font-size:9px}
+
+  /* Two-col → one col */
   .fg2,.fg3{grid-template-columns:1fr}
   .twocol{grid-template-columns:1fr}
-  .topbar{padding:8px 14px;gap:6px}
-  .tbar-date{display:none}
-  .kanban{gap:8px}
-  .kcol{width:175px}
-  .modal{border-radius:14px 14px 0 0!important;position:fixed!important;bottom:0!important;left:0!important;right:0!important;max-width:100%!important;max-height:92vh;margin:0}
-  .modal-lg{max-width:100%!important;width:100%!important}
-  .backdrop{align-items:flex-end;padding:0}
-  .vcc{flex-direction:column;align-items:flex-start;gap:8px}
+
+  /* Section headers */
   .sh{flex-direction:column;align-items:flex-start;gap:6px}
-  .sh-r{width:100%;flex-wrap:wrap}
-  .sh-r select,.sh-r input[type=date]{flex:1;min-width:120px}
-  .ttbar{flex-wrap:wrap;gap:6px}
-  .srch{width:100%}
+  .sh-r{width:100%;display:flex;flex-wrap:wrap;gap:6px}
+  .sh-r select,.sh-r input[type=date],.sh-r .fc{flex:1;min-width:100px;font-size:11px;padding:5px 7px}
+  .sh-t{font-size:13px}
+
+  /* Tables */
+  .twrap{border-radius:10px}
+  .ttbar{flex-wrap:wrap;gap:6px;padding:8px 10px}
+  .srch{width:100%;min-width:0}
   table{font-size:11px}
-  td,th{padding:6px 8px}
-  .btn{font-size:11px;padding:6px 10px}
-  #float-venta{bottom:85px;right:14px}
-  #float-venta button{padding:11px 16px;font-size:12px}
-  .comm-box{gap:10px;flex-direction:column}
-  .comm-item .cv{font-size:15px}
-  .kcard{padding:8px 10px}
-  .mh{padding:14px 16px 10px}
+  th,td{padding:6px 8px}
+  /* Hide less important columns on mobile */
+  .mob-hide{display:none}
+
+  /* Modals — slide from bottom */
+  .backdrop{align-items:flex-end;padding:0}
+  .modal{border-radius:16px 16px 0 0!important;max-width:100%!important;width:100%!important;max-height:94vh;margin:0}
+  .modal-lg{max-width:100%!important;width:100%!important}
   .mb{padding:14px 16px}
-  .mf{padding:10px 16px}
+  .mh{padding:14px 16px 10px}
+  .mf{padding:10px 16px;flex-wrap:wrap;gap:6px}
+  .mf .btn{flex:1;justify-content:center}
+
+  /* Kanban */
+  .kanban{gap:8px;padding-bottom:8px}
+  .kcol{width:170px}
+  .kcard{padding:8px 10px}
+
+  /* Float button */
+  #float-venta{bottom:86px;right:12px}
+  #float-venta button{padding:11px 16px;font-size:12px}
+
+  /* Commission box */
+  .comm-box{flex-direction:column;gap:8px}
+  .comm-item .cv{font-size:15px}
+
+  /* Vendor cards */
+  .vcc{flex-direction:column;gap:8px}
+  .vcamt{align-self:flex-start}
+
+  /* Buttons */
+  .btn{font-size:11px;padding:6px 10px}
+  .btn-sm{font-size:10px;padding:3px 7px}
+
+  /* Search */
+  #search-results{max-height:260px}
 }
+
 @media(max-width:480px){
   .kgrid{grid-template-columns:1fr}
-  .kcol{width:158px}
-  .content{padding:8px;padding-bottom:78px}
-  table{font-size:10px}
-  td,th{padding:5px 6px}
-  .kc{padding:10px 12px}
-  .kc .kv{font-size:17px}
-  .btn-add{font-size:11px;padding:8px}
+  .topbar .btn-out{display:none}
+  .topbar .btn-blue{display:inline-flex}
+  #global-search{max-width:130px;font-size:11px}
+  .content{padding:8px;padding-bottom:80px}
+  .kcol{width:155px}
+  th,td{padding:5px 6px;font-size:10px}
+  .kc .kv{font-size:15px}
+  .sh-r{gap:4px}
+  .sh-r select,.sh-r input[type=date]{font-size:10px;padding:4px 6px}
 }
+
 @media(max-width:375px){
   .kcol{width:145px}
-  .content{padding:6px;padding-bottom:78px}
-  td,th{padding:4px 5px;font-size:9px}
-  .topbar{padding:6px 10px}
+  .content{padding:6px;padding-bottom:80px}
+  th,td{padding:4px 5px;font-size:9px}
+  #global-search{display:none}
+  .kgrid{gap:6px}
 }
 </style>
 </head>
@@ -474,9 +515,9 @@ textarea.fc{resize:vertical;min-height:70px}
         </div>
         <div style="overflow-x:auto">
           <table><thead><tr>
-            <th>Fecha</th><th>Cliente</th><th>Vendedor</th><th>Producto</th>
-            <th>Total</th><th>Cobrado</th><th>Saldo</th>
-            <th>Tasa %</th><th>Comisión $</th><th>Estado</th><th></th>
+            <th>Fecha</th><th>Cliente</th><th class="mob-hide">Vendedor</th><th class="mob-hide">Producto</th>
+            <th class="mob-hide">Lista</th><th>Total MXN</th><th>Cobrado</th><th>Saldo</th>
+            <th class="mob-hide">Tasa</th><th>Comisión</th><th>Estado</th><th></th>
           </tr></thead><tbody id="v-tbody"></tbody></table>
         </div>
       </div>
@@ -1430,14 +1471,22 @@ function badges(){
 
 // ═══════ FILL SELECTS ═══════
 function fillSelects(){
-  const vo=VENDORS.map(v=>`<option>${v.name}</option>`).join('');
-  const po=PRODS.map(p=>`<option>${p.name}</option>`).join('');
+  // Build options WITH value attributes for proper filtering
+  const vo=VENDORS.map(v=>`<option value="${v.name}">${v.name}</option>`).join('');
+  const po=PRODS.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
+
+  // Form selects
   ['l-vend','v-vend'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=vo;});
   ['l-prod','v-prod'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=po;});
-  // pipeline filter
-  const pf=document.getElementById('pip-fv');
-  if(pf&&pf.options.length===1)VENDORS.forEach(v=>{const o=document.createElement('option');o.textContent=v.name;pf.appendChild(o);});
-  // stage buttons
+
+  // Filter selects — vendor filters in ventas, comisiones, pipeline
+  const vendOptsFull='<option value="all">Todos los vendedores</option>'+vo;
+  ['v-vend-fil','cm-vend-fil','pip-fv'].forEach(id=>{
+    const e=document.getElementById(id);
+    if(e) e.innerHTML=vendOptsFull;
+  });
+
+  // Stage buttons for lead form
   const sb=document.getElementById('l-stg');
   if(sb)sb.innerHTML=STAGES.map((s,i)=>`<button class="sbtn${i===0?' on':''}" style="${i===0?'color:'+s.color+';border-color:'+s.color:''}" onclick="pickStage(this,'${s.key}','${s.color}')">${s.label}</button>`).join('');
   currentStage=currentStage||'lead';
@@ -1585,65 +1634,121 @@ function rVKpis(){
 }
 
 function rVentas(){
-  const fil   = document.getElementById('v-mes-fil')?.value || 'all';
-  const vFil  = document.getElementById('v-vend-fil')?.value || 'all';
-  const srch  = (document.getElementById('v-srch')?.value||'').toLowerCase();
-  let data    = myventas();
-  // Month filter
-  if(['1','2','3'].includes(fil)){
-    const m=parseInt(fil);
-    data=data.filter(v=>{const d=new Date(v.fecha);return d.getMonth()+1===m&&d.getFullYear()===2026;});
+  // ── Read all filter values ────────────────────────────
+  const mesFil  = document.getElementById('v-mes-fil')?.value  || 'all';
+  const vFil    = document.getElementById('v-vend-fil')?.value || 'all';
+  const desde   = document.getElementById('v-fecha-desde')?.value || '';
+  const hasta   = document.getElementById('v-fecha-hasta')?.value || '';
+  const srch    = (document.getElementById('v-srch')?.value||'').toLowerCase().trim();
+
+  // ── Start with role-filtered data ────────────────────
+  let data = myventas();
+
+  // ── Month filter (all 12) ────────────────────────────
+  if(mesFil!=='all'){
+    const m=parseInt(mesFil);
+    data=data.filter(v=>{const d=new Date(v.fecha);return d.getMonth()+1===m;});
   }
-  if(fil==='week'){const d=new Date();d.setDate(d.getDate()-7);data=data.filter(v=>new Date(v.fecha)>=d);}
-  // Vendedor filter (gerente only)
-  if(vFil!=='all') data=data.filter(v=>v.vendedor===vFil);
-  if(srch) data=data.filter(v=>v.cliente.toLowerCase().includes(srch)||v.pedido.toLowerCase().includes(srch));
+
+  // ── Date range filter ────────────────────────────────
+  if(desde) data=data.filter(v=>v.fecha>=desde);
+  if(hasta) data=data.filter(v=>v.fecha<=hasta);
+
+  // ── Vendor filter ────────────────────────────────────
+  if(vFil&&vFil!=='all') data=data.filter(v=>v.vendedor===vFil);
+
+  // ── Text search — name, pedido, product, razon, vendedor ──
+  if(srch){
+    data=data.filter(v=>{
+      return ['cliente','pedido','producto','razon','vendedor','notas'].some(function(k){
+        return (v[k]||'').toLowerCase().indexOf(srch)>-1;
+      });
+    });
+  }
+
+  // ── Sort newest first ────────────────────────────────
+  data=data.slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+
+  // ── Render — use pagos[] for cobrado/saldo/comision ──
   document.getElementById('v-tbody').innerHTML=data.length?data.map(v=>{
-    const sl=v.total-v.cobrado,rate=pRate(v.producto);
+    const vPgs   = pagos.filter(p=>p.ventaId===v.id);
+    const cobrado= vPgs.reduce((s,p)=>s+(p.montoMxn||0),0);
+    const total  = v.totalMxn||v.total||0;
+    const saldo  = total-cobrado;
+    const comTotal=vPgs.reduce((s,p)=>s+(p.comision||0),0);
+    const lista  = v.lista||'l1';
+    const tasa   = getRateLista?getRateLista(lista):(LISTA_RATES?LISTA_RATES[lista]||5:5);
+    const listaLabel={'l1':'L1','l2':'L2','l3':'L3'}[lista]||lista.toUpperCase();
+    const esUSD  = v.moneda==='USD';
     return `<tr>
-      <td class="mono">${v.fecha}</td>
-      <td><strong>${v.cliente}</strong></td>
-      <td>${v.vendedor}</td>
-      <td>${v.producto}</td>
-      <td class="mono">${f$(v.total)}</td>
-      <td class="mono" style="color:#16a34a">${f$(v.cobrado)}</td>
-      <td class="mono" style="color:${sl>0?'#ef4444':'#16a34a'}">${f$(sl)}</td>
-      <td class="mono" style="color:#8b5cf6;font-weight:600">${(rate*100).toFixed(1)}%</td>
-      <td class="mono" style="color:#d97706;font-weight:700">${f$(v.comision)}</td>
-      <td>${sl===0?pill('✅ Liquidado','#16a34a'):pill('⚠ Pendiente','#f59e0b')}</td>
-      <td>${sl>0?`<button class="btn btn-amber btn-sm" onclick="openCobro(${v.id})">Cobrar</button>`:''}</td>
+      <td class="mono" style="white-space:nowrap">${v.fecha}</td>
+      <td style="min-width:120px"><strong>${v.cliente||'—'}</strong>${v.razon?`<div style="font-size:10px;color:#94a3b8">${v.razon}</div>`:''}</td>
+      <td style="white-space:nowrap">${v.vendedor||'—'}</td>
+      <td style="min-width:100px">${v.producto||'—'}</td>
+      <td style="text-align:center">${pill(listaLabel,'#8b5cf6')}</td>
+      <td class="mono" style="white-space:nowrap">${f$(total)}${esUSD?`<div style="font-size:10px;color:#94a3b8">USD ${v.total}×${v.tc}</div>`:''}</td>
+      <td class="mono" style="color:#16a34a;white-space:nowrap">${f$(cobrado)}</td>
+      <td class="mono" style="color:${saldo>0?'#f59e0b':'#16a34a'};white-space:nowrap">${f$(saldo)}</td>
+      <td class="mono" style="color:#8b5cf6;white-space:nowrap">${tasa.toFixed(1)}%</td>
+      <td class="mono" style="color:#d97706;font-weight:700;white-space:nowrap">${f$(comTotal)}</td>
+      <td>${saldo<=0?pill('✅ Liquidado','#16a34a'):pill('⚠ Pendiente','#f59e0b')}</td>
+      <td style="white-space:nowrap">${saldo>0?`<button class="btn btn-amber btn-sm" onclick="openCobro(${v.id})">Cobrar</button>`:''} <button class="btn btn-out btn-sm" onclick="editVenta(${v.id},null)" style="padding:4px 7px;font-size:11px">✏️</button></td>
     </tr>`;
-  }).join(''):`<tr><td colspan="11" style="text-align:center;padding:24px;color:#94a3b8">Sin registros</td></tr>`;
+  }).join(''):`<tr><td colspan="12" style="text-align:center;padding:24px;color:#94a3b8">Sin registros para este filtro</td></tr>`;
 }
 
 // ─── rCobros ────────────────────────────────────────────
 function rCobros(){
-  const mesFil = document.getElementById('v-mes-fil')?.value||'all';
-  const desde  = document.getElementById('v-fecha-desde')?.value||'';
-  const hasta  = document.getElementById('v-fecha-hasta')?.value||'';
+  const mesFil = document.getElementById('v-mes-fil')?.value  || 'all';
+  const vFil   = document.getElementById('v-vend-fil')?.value || 'all';
+  const desde  = document.getElementById('v-fecha-desde')?.value || '';
+  const hasta  = document.getElementById('v-fecha-hasta')?.value || '';
+  const srch   = (document.getElementById('v-srch')?.value||'').toLowerCase().trim();
+
   let data = mypagos ? mypagos() : pagos;
-  if(mesFil!=='all'){const m=parseInt(mesFil);data=data.filter(p=>{const d=new Date(p.fecha);return d.getMonth()+1===m;});}
+
+  // Month filter
+  if(mesFil!=='all'){
+    const m=parseInt(mesFil);
+    data=data.filter(p=>{const d=new Date(p.fecha);return d.getMonth()+1===m;});
+  }
+  // Date range
   if(desde) data=data.filter(p=>p.fecha>=desde);
   if(hasta) data=data.filter(p=>p.fecha<=hasta);
-  data=data.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+
+  // Vendedor filter — via parent venta
+  if(vFil&&vFil!=='all'){
+    const vIds=ventas.filter(v=>v.vendedor===vFil).map(v=>v.id);
+    data=data.filter(p=>vIds.includes(p.ventaId));
+  }
+
+  // Text search
+  if(srch){
+    data=data.filter(p=>{
+      const v=ventas.find(x=>x.id===p.ventaId)||{};
+      return ['cliente','pedido','vendedor'].some(k=>(v[k]||'').toLowerCase().indexOf(srch)>-1)||
+             (p.referencia||'').toLowerCase().indexOf(srch)>-1;
+    });
+  }
+
+  data=data.slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+
   const tbody=document.getElementById('cobros-tbody');
   if(!tbody)return;
   tbody.innerHTML=data.length?data.map(p=>{
     const v=ventas.find(x=>x.id===p.ventaId)||{};
     return `<tr>
-      <td class="mono">${p.fecha||'—'}</td>
+      <td class="mono" style="white-space:nowrap">${p.fecha||'—'}</td>
       <td><strong>${v.cliente||'—'}</strong></td>
-      <td>${v.vendedor||'—'}</td>
-      <td class="mono" style="color:#16a34a;font-weight:700">${f$(p.montoMxn||0)}</td>
-      <td>${p.moneda==='USD'?'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:#dbeafe;color:#1d4ed8">USD</span>':'<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:#dcfce7;color:#16a34a">MXN</span>'}</td>
+      <td style="white-space:nowrap">${v.vendedor||'—'}</td>
+      <td class="mono" style="color:#16a34a;font-weight:700;white-space:nowrap">${f$(p.montoMxn||0)}</td>
+      <td>${p.moneda==='USD'?'<span class="currency-badge badge-usd">USD</span>':'<span class="currency-badge badge-mxn">MXN</span>'}</td>
       <td class="mono">${p.moneda==='USD'&&p.tc?p.tc:'-'}</td>
       <td>${p.metodo||'—'}</td>
       <td class="mono" style="font-size:11px;color:#64748b">${p.referencia||'—'}</td>
     </tr>`;
-  }).join(''):`<tr><td colspan="8" style="text-align:center;padding:20px;color:#94a3b8">Sin cobros para el período</td></tr>`;
+  }).join(''):`<tr><td colspan="8" style="text-align:center;padding:20px;color:#94a3b8">Sin cobros para este filtro</td></tr>`;
 }
-
-// ═══════ COMISIONES ═══════
 function rComisiones(){
   // ── Filters ──────────────────────────────────────────
   const mes   = document.getElementById('cm-mes')?.value||'all';
