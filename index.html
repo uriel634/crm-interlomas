@@ -1146,18 +1146,34 @@ const LS = {
 // ── Standalone async functions called from LS object ──
 async function doClearData() {
   closeM('m-confirm-clear');
+
+  // STEP 1: Clear memory immediately
+  leads=[]; ventas=[]; pagos=[]; activity=[]; loadLog=[];
+  nLid=1; nVid=1;
+
+  // STEP 2: Set flag so initApp won't reload from Sheets on next run
+  try { sessionStorage.setItem('crm_cleared','1'); } catch(e){}
+
+  fillSelects(); badges();
+  render(document.querySelector('.page.on')?.id?.replace('page-','')||'dashboard');
+  updateStorageStatus();
+  setStatus('🗑 Borrando en Google Sheets…','#f59e0b');
+
+  // STEP 3: Send empty arrays to Sheets — CRITICAL
   try {
-    setStatus('⏳ Borrando datos…','#f59e0b');
-    // Send empty arrays to Sheets — NOT demo data
-    await apiPost('full_backup', { prospectos:[], ventas:[], productos:PRODS, vendedores:VENDORS });
-    // Clear ALL data — true blank slate
-    leads=[]; ventas=[]; pagos=[]; activity=[]; loadLog=[];
-    nLid=1; nVid=1;
-    fillSelects(); badges();
-    render(document.querySelector('.page.on')?.id?.replace('page-','')||'dashboard');
-    updateStorageStatus();
-    setStatus('✅ Base de datos limpia','#22c55e');
-  } catch(e) { setStatus('❌ '+e.message,'#ef4444'); }
+    await apiPost('full_backup', {
+      prospectos:[], ventas:[], productos:PRODS, vendedores:VENDORS
+    });
+    setStatus('✅ Base de datos completamente limpia','#22c55e');
+    // Show confirmation
+    const msg=document.createElement('div');
+    msg.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:700;z-index:999;box-shadow:0 4px 16px rgba(0,0,0,.2)';
+    msg.textContent='✅ Todos los datos fueron borrados. Recarga para confirmar.';
+    document.body.appendChild(msg);
+    setTimeout(()=>msg.remove(),5000);
+  } catch(e) {
+    setStatus('⚠️ Borrado local — verifica conexión para sincronizar Sheets','#f59e0b');
+  }
 }
 
 async function importBackupFile(file) {
@@ -1525,101 +1541,157 @@ function fillSelects(){
 
 // ═══════ DASHBOARD ═══════
 function rDash(){
-  // Period filter
+  const isG  = (CU === 'gerente');
   const dMes = document.getElementById('d-mes')?.value || 'all';
-  const mv0  = myventas();
-  const mv   = dMes==='all' ? mv0 : mv0.filter(v=>{const d=new Date(v.fecha);return d.getMonth()+1===parseInt(dMes)&&d.getFullYear()===2026;});
-  const ml0  = myleads();
-  const ml   = dMes==='all' ? ml0 : ml0;
   const td   = today();
-  const tv=mv.reduce((s,v)=>s+(v.totalMxn||v.total||0),0);
-  const allMyPgs=(mypagos?mypagos():pagos);
-  const mvIds=mv.map(v=>v.id);
-  const tc=allMyPgs.filter(p=>mvIds.includes(p.ventaId)).reduce((s,p)=>s+(p.montoMxn||0),0);
-  const tcom=allMyPgs.filter(p=>mvIds.includes(p.ventaId)).reduce((s,p)=>s+(p.comision||0),0);
-  const act=ml.filter(l=>l.stage!=='cierre').length;
-  const urg=ml.filter(l=>l.followup&&l.followup<=td&&l.stage!=='cierre').length;
 
-  // Trend vs previous month
-  const prevM2=dMes==='all'?null:(parseInt(dMes)<=1?null:String(parseInt(dMes)-1));
-  const mvPrev2=prevM2?mv0.filter(v=>{const d=new Date(v.fecha);return d.getMonth()+1===parseInt(prevM2);}):[];
-  const tvPrev2=mvPrev2.reduce((s,v)=>s+(v.totalMxn||v.total||0),0);
-  const allPgs2=mypagos?mypagos():pagos;
-  const prevIds2=mvPrev2.map(v=>v.id);
-  const tcPrev2=allPgs2.filter(p=>prevIds2.includes(p.ventaId)).reduce((s,p)=>s+(p.montoMxn||0),0);
-  function pctTrend(cur,prev){if(!prev||prev===0)return '';const p=((cur-prev)/prev*100);return ' <span style="font-size:10px;font-weight:700;color:'+(p>=0?'#16a34a':'#ef4444')+'">'+(p>=0?'↑':'↓')+Math.abs(p).toFixed(0)+'% vs ant.</span>';}
+  // All data filtered by role via myleads()/myventas()/mypagos()
+  const mv0  = myventas();
+  const ml0  = myleads().filter(l=>l.stage!=='perdido');
+  const mv   = dMes==='all' ? mv0 : mv0.filter(v=>{const d=new Date(v.fecha);return d.getMonth()+1===parseInt(dMes);});
+  const ml   = dMes==='all' ? ml0 : ml0;
+  const myPgs= mypagos ? mypagos() : pagos;
+  const mvIds= mv.map(v=>v.id);
+
+  // KPIs — all from role-filtered data
+  const tv   = mv.reduce((s,v)=>s+(v.totalMxn||v.total||0),0);
+  const tc   = myPgs.filter(p=>mvIds.includes(p.ventaId)).reduce((s,p)=>s+(p.montoMxn||0),0);
+  const tcom = myPgs.filter(p=>mvIds.includes(p.ventaId)).reduce((s,p)=>s+(p.comision||0),0);
+  const act  = ml.filter(l=>l.stage!=='cierre').length;
+  const urg  = ml.filter(l=>l.followup&&l.followup<=td&&l.stage!=='cierre').length;
+
+  // Previous month comparison
+  const prevM = dMes==='all'?null:(parseInt(dMes)<=1?null:String(parseInt(dMes)-1));
+  const mv0Prev = prevM?mv0.filter(v=>{const d=new Date(v.fecha);return d.getMonth()+1===parseInt(prevM);}):[];
+  const tvPrev2 = mv0Prev.reduce((s,v)=>s+(v.totalMxn||v.total||0),0);
+  const prevIds = mv0Prev.map(v=>v.id);
+  const tcPrev2 = myPgs.filter(p=>prevIds.includes(p.ventaId)).reduce((s,p)=>s+(p.montoMxn||0),0);
+  function pctTrend(cur,prev){
+    if(!prev)return '';
+    const p=((cur-prev)/prev*100);
+    return ' <span style="font-size:10px;font-weight:700;color:'+(p>=0?'#16a34a':'#ef4444')+'">'+(p>=0?'↑':'↓')+Math.abs(p).toFixed(0)+'%</span>';
+  }
+
+  // KPI cards
+  // KPI labels adapt to role
   document.getElementById('d-kpis').innerHTML=[
-    {l:'Total Vendido',v:f$(tv),s:mv.length+' ventas'+pctTrend(tv,tvPrev2),c:'bl'},
-    {l:'Total Cobrado',v:f$(tc),s:fP(tv?tc/tv:0)+' cobrado'+pctTrend(tc,tcPrev2),c:'gr'},
-    {l:'Por Cobrar',   v:f$(tv-tc),s:'Saldo pendiente',c:'am'},
-    {l:'Comisiones',   v:f$(tcom),s:'Base generada',c:'pu'},
-    {l:'Prospectos',   v:act,s:'Activos en pipeline',c:'te'},
-    {l:'Urgentes',     v:urg,s:'Seguimientos hoy',c:'re'},
+    {l:isG?'Total Vendido':'Mis Ventas',   v:f$(tv),    s:mv.length+' ventas'+pctTrend(tv,tvPrev2),      c:'bl'},
+    {l:isG?'Total Cobrado':'Cobrado',      v:f$(tc),    s:fP(tv?tc/tv:0)+' cobrado'+pctTrend(tc,tcPrev2),c:'gr'},
+    {l:isG?'Por Cobrar':'Por Cobrarme',    v:f$(tv-tc), s:'Saldo pendiente',                               c:'am'},
+    {l:isG?'Comisiones':'Mi Comisión',     v:f$(tcom),  s:'sobre cobros ÷1.16',                           c:'pu'},
+    {l:isG?'Prospectos':'Mis Prospectos',  v:act,        s:'Activos en pipeline',                          c:'te'},
+    {l:isG?'Urgentes':'Mis Urgentes',      v:urg,        s:'Seguimientos pendientes',                      c:'re'},
   ].map(k=>`<div class="kc ${k.c}"><div class="kl">${k.l}</div><div class="kv">${k.v}</div><div class="ks">${k.s}</div></div>`).join('');
 
-  const sc={};STAGES.forEach(s=>sc[s.key]=ml.filter(l=>l.stage===s.key&&l.stage!=='perdido').length);
-  const mx=Math.max(...Object.values(sc),1);
-  document.getElementById('d-funnel').innerHTML=STAGES.map(s=>`
-    <div class="crow">
-      <div class="clbl">${s.label}</div>
-      <div class="ctrk"><div class="cfil" style="width:${sc[s.key]/mx*100}%;background:${s.color}"></div></div>
-      <div class="cval">${sc[s.key]} prosp.</div>
-    </div>`).join('');
+  // Funnel — always role-filtered (uses ml which is already role-filtered)
+  const sc2={};STAGES.forEach(s=>sc2[s.key]=ml.filter(l=>l.stage===s.key).length);
+  const mx=Math.max(...Object.values(sc2),1);
+  document.getElementById('d-funnel').innerHTML=STAGES.map(s=>
+    `<div class="crow"><div class="clbl">${s.label}</div><div class="ctrk"><div class="cfil" style="width:${sc2[s.key]/mx*100}%;background:${s.color}"></div></div><div class="cval">${sc2[s.key]} prosp.</div></div>`
+  ).join('');
 
-  // Ranking: Gerente sees all, Vendedor sees personal stats
-  if(CU==='gerente'){
+  // Ranking / Personal panel — role-aware
+  document.querySelectorAll('#page-dashboard .sh-t').forEach(function(el){
+    if(el.textContent==='Ranking Vendedores'||el.textContent==='Mi Desempeño'){
+      el.textContent = isG ? 'Ranking Vendedores' : 'Mi Desempeño';
+    }
+  });
+
+  if(isG){
+    // Gerente: ranking all vendors
+    const allPgs2 = pagos; // gerente sees all pagos
     const maxV=Math.max(...VENDORS.map(v=>ventas.filter(x=>x.vendedor===v.name).reduce((s,x)=>s+(x.totalMxn||x.total||0),0)),1);
     document.getElementById('d-rank').innerHTML=VENDORS.map(v=>{
-      const vv=ventas.filter(x=>x.vendedor===v.name).reduce((s,x)=>s+(x.totalMxn||x.total||0),0);
-      return '<div class="crow"><div class="clbl">'+v.name+'</div><div class="ctrk"><div class="cfil" style="width:'+Math.round(vv/maxV*100)+'%;background:'+v.color+'"></div></div><div class="cval">'+f$(vv)+'</div></div>';
+      const vVentas=ventas.filter(x=>x.vendedor===v.name);
+      const vv=vVentas.reduce((s,x)=>s+(x.totalMxn||x.total||0),0);
+      const vIds=vVentas.map(x=>x.id);
+      const vc2=allPgs2.filter(p=>vIds.includes(p.ventaId)).reduce((s,p)=>s+(p.comision||0),0);
+      return `<div class="crow" style="margin-bottom:6px">
+        <div class="clbl" style="font-weight:700;color:${v.color}">${v.name}</div>
+        <div class="ctrk"><div class="cfil" style="width:${Math.round(vv/maxV*100)}%;background:${v.color}"></div></div>
+        <div style="text-align:right;min-width:70px">
+          <div class="cval">${f$(vv)}</div>
+          <div style="font-size:10px;color:#d97706">Com. ${f$(vc2)}</div>
+        </div>
+      </div>`;
     }).join('');
   } else {
     // Vendedor: personal performance panel
-    const vObj = VENDORS.find(function(v){return v.id===CU;})||{name:'Yo',color:'#3b82f6',cuota:150000,bono:20};
-    const myV  = myventas();
-    const myPg = mypagos ? mypagos() : pagos;
-    const myTv = myV.reduce(function(s,v){return s+(v.totalMxn||v.total||0);},0);
-    const myTc = myPg.reduce(function(s,p){return s+(p.montoMxn||0);},0);
-    const myC  = myPg.reduce(function(s,p){return s+(p.comision||0);},0);
-    const cumpl= vObj.cuota ? myTv/vObj.cuota : 0;
-    const bono = cumpl>=1 ? myC*(vObj.bono/100) : 0;
+    const vObj = VENDORS.find(v=>v.id===CU)||{name:'Yo',color:'#3b82f6',cuota:150000,bono:20};
+    const cumpl = vObj.cuota ? tv/vObj.cuota : 0;
+    const bono  = cumpl>=1 ? tcom*(vObj.bono/100) : 0;
     document.getElementById('d-rank').innerHTML=
       '<div style="display:flex;flex-direction:column;gap:10px">'+
-        '<div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:#475569">Cuota mensual</span><span style="font-weight:700">'+f$(vObj.cuota)+'</span></div>'+
-        '<div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:#475569">Mis ventas</span><span style="font-weight:700;color:#3b82f6">'+f$(myTv)+'</span></div>'+
-        '<div><div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:4px"><span>Avance cuota</span><span>'+Math.round(cumpl*100)+'%</span></div>'+
-        '<div class="pbar"><div class="pfill" style="width:'+Math.min(cumpl,1)*100+'%;background:'+(cumpl>=1?'#22c55e':'#3b82f6')+'"></div></div></div>'+
-        '<div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:#475569">Cobrado</span><span style="font-weight:700;color:#22c55e">'+f$(myTc)+'</span></div>'+
-        '<div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:#475569">Mi comisión</span><span style="font-weight:700;color:#d97706">'+f$(myC)+'</span></div>'+
-        (bono>0?'<div style="background:#fef3c7;border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between"><span style="color:#d97706;font-weight:700">🎉 Bono meta</span><span style="color:#d97706;font-weight:800">+'+f$(bono)+'</span></div>':'')+
-        '<div style="border-top:1px solid #e2e8f0;padding-top:8px;display:flex;justify-content:space-between"><span style="font-weight:700">Total a cobrar</span><span style="font-size:16px;font-weight:800;color:#8b5cf6">'+f$(myC+bono)+'</span></div>'+
+        '<div style="display:flex;justify-content:space-between;align-items:center">'+
+          '<span style="font-size:12px;color:#475569">Mi cuota mensual</span>'+
+          '<span style="font-weight:700">'+f$(vObj.cuota)+'</span>'+
+        '</div>'+
+        '<div style="display:flex;justify-content:space-between;align-items:center">'+
+          '<span style="font-size:12px;color:#475569">Mis ventas</span>'+
+          '<span style="font-weight:700;color:#3b82f6">'+f$(tv)+'</span>'+
+        '</div>'+
+        '<div>'+
+          '<div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:5px">'+
+            '<span>Avance cuota</span><span>'+Math.round(cumpl*100)+'%</span>'+
+          '</div>'+
+          '<div class="pbar"><div class="pfill" style="width:'+Math.min(cumpl,1)*100+'%;background:'+(cumpl>=1?'#22c55e':'#3b82f6')+'"></div></div>'+
+        '</div>'+
+        '<div style="display:flex;justify-content:space-between;align-items:center">'+
+          '<span style="font-size:12px;color:#475569">Cobrado</span>'+
+          '<span style="font-weight:700;color:#22c55e">'+f$(tc)+'</span>'+
+        '</div>'+
+        '<div style="display:flex;justify-content:space-between;align-items:center">'+
+          '<span style="font-size:12px;color:#475569">Comisión acumulada</span>'+
+          '<span style="font-weight:700;color:#d97706">'+f$(tcom)+'</span>'+
+        '</div>'+
+        (bono>0?'<div style="background:#fef3c7;border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between">'+
+          '<span style="color:#d97706;font-weight:700">🎉 Bono meta alcanzada</span>'+
+          '<span style="color:#d97706;font-weight:800">+'+f$(bono)+'</span></div>':'')+
+        '<div style="border-top:1px solid #e2e8f0;padding-top:8px;display:flex;justify-content:space-between;align-items:center">'+
+          '<span style="font-size:13px;font-weight:700;color:#1a2332">Total a cobrar</span>'+
+          '<span style="font-size:18px;font-weight:800;color:#8b5cf6">'+f$(tcom+bono)+'</span>'+
+        '</div>'+
       '</div>';
   }
-  // Update panel title for vendedor
+
+  // Urgent followups — role-filtered (ml already filtered)
+  // Update section titles by role
   document.querySelectorAll('#page-dashboard .sh-t').forEach(function(el){
-    if(el.textContent==='Ranking Vendedores'||el.textContent==='Mi Desempeño'){
-      el.textContent = CU==='gerente' ? 'Ranking Vendedores' : 'Mi Desempeño';
-    }
+    var t=el.textContent.trim();
+    var map={
+      'Ranking Vendedores':'Mi Desempeño',
+      'Mi Desempeño':'Ranking Vendedores',
+      'Embudo de Ventas':'Mi Pipeline',
+      'Mi Pipeline':'Embudo de Ventas',
+      'Resumen Ejecutivo':'Mi Resumen',
+      'Mi Resumen':'Resumen Ejecutivo',
+    };
+    if(map[t]) el.textContent = isG ? (
+      t==='Mi Desempeño'?'Ranking Vendedores':
+      t==='Mi Pipeline'?'Embudo de Ventas':
+      t==='Mi Resumen'?'Resumen Ejecutivo':t
+    ) : (
+      t==='Ranking Vendedores'?'Mi Desempeño':
+      t==='Embudo de Ventas'?'Mi Pipeline':
+      t==='Resumen Ejecutivo'?'Mi Resumen':t
+    );
   });
 
   const urgL=ml.filter(l=>l.followup&&l.followup<=td&&l.stage!=='cierre').sort((a,b)=>a.followup.localeCompare(b.followup));
   document.getElementById('d-urgent').innerHTML=urgL.length
     ?urgL.map(l=>`<div class="fuc" onclick="openDet(${l.id})">
         <div class="fu-ico">⚠️</div>
-        <div class="fu-inf"><div class="fu-n">${l.nombre}</div><div class="fu-s">${l.vendedor} · ${l.producto} · ${si(l.stage).label}</div></div>
-        <div class="fu-d" style="color:#ef4444">${ddiff(l.followup)===0?'Hoy':'+'+ddiff(l.followup)+'d vencido'}</div>
+        <div class="fu-inf"><div class="fu-n">${l.nombre}</div><div class="fu-s">${l.vendedor||''} · ${l.producto||''} · ${si(l.stage).label}</div></div>
+        <div style="font-size:12px;font-weight:700;color:#ef4444">${l.followup===td?'Hoy':'+'+Math.abs(Math.round((new Date()-new Date(l.followup))/86400000))+'d'}</div>
       </div>`).join('')
-    :`<div class="panel pp" style="color:#94a3b8;text-align:center">✅ Sin seguimientos urgentes hoy</div>`;
+    :`<div class="panel pp" style="color:#94a3b8;text-align:center">✅ Sin seguimientos urgentes</div>`;
 
-  document.getElementById('d-act').innerHTML=`<div>${activity.map(a=>`
-    <div class="aitem">
-      <div class="adot" style="background:${a.color}"></div>
-      <div class="atxt">${a.text}</div>
-      <div class="atm">${a.time}</div>
-    </div>`).join('')}</div>`;
+  // Recent activity — global (same for everyone)
+  document.getElementById('d-act').innerHTML=activity.slice(0,8).map(a=>
+    `<div class="aitem"><div class="adot" style="background:${a.color||'#3b82f6'}"></div><div class="atxt">${a.text||a.texto||''}</div><div class="atm">${a.time||a.fecha||''}</div></div>`
+  ).join('')||'<div style="color:#94a3b8;font-size:12px">Sin actividad reciente</div>';
 }
 
-// ═══════ PIPELINE ═══════
 function rPipeline(){
   const fv   = document.getElementById('pip-fv')?.value||'all';
   const pMes = document.getElementById('pip-mes')?.value||'all';
@@ -2741,6 +2813,16 @@ async function initApp() {
   setStatus('⏳ Conectando…', '#f59e0b');
 
   // STEP 2 — Load real data from Sheets in background
+  // Skip if user just cleared data (sessionStorage flag)
+  let justCleared = false;
+  try { justCleared = sessionStorage.getItem('crm_cleared')==='1'; } catch(e){}
+  if(justCleared){
+    try { sessionStorage.removeItem('crm_cleared'); } catch(e){}
+    setStatus('✅ Base de datos limpia','#22c55e');
+    badges(); updateStorageStatus();
+    return; // don't reload from Sheets
+  }
+
   try {
     await apiGet('init'); // also creates _Pines sheet if missing
     const all = await apiGet('all');
