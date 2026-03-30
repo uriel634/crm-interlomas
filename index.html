@@ -516,7 +516,8 @@ textarea.fc{resize:vertical;min-height:70px}
         <div style="overflow-x:auto">
           <table><thead><tr>
             <th>Fecha</th><th>Cliente</th><th class="mob-hide">Vendedor</th><th class="mob-hide">Producto</th>
-            <th class="mob-hide">Lista</th><th>Total MXN</th><th>Cobrado</th><th>Saldo</th>
+            <th class="mob-hide">Lista</th><th>Moneda</th><th class="mob-hide">TC</th>
+            <th>Total MXN</th><th>Cobrado</th><th>Saldo</th>
             <th class="mob-hide">Tasa</th><th>Comisión</th><th>Estado</th><th></th>
           </tr></thead><tbody id="v-tbody"></tbody></table>
         </div>
@@ -1149,10 +1150,9 @@ async function doClearData() {
     setStatus('⏳ Borrando datos…','#f59e0b');
     // Send empty arrays to Sheets — NOT demo data
     await apiPost('full_backup', { prospectos:[], ventas:[], productos:PRODS, vendedores:VENDORS });
-    // Clear memory
-    leads=[]; ventas=JSON.parse(JSON.stringify(DEFAULT_VENTAS)); pagos=[]; activity=[]; loadLog=[];
-    nLid=1; nVid=7;
-    rebuildPagosFromVentas();
+    // Clear ALL data — true blank slate
+    leads=[]; ventas=[]; pagos=[]; activity=[]; loadLog=[];
+    nLid=1; nVid=1;
     fillSelects(); badges();
     render(document.querySelector('.page.on')?.id?.replace('page-','')||'dashboard');
     updateStorageStatus();
@@ -1566,15 +1566,41 @@ function rDash(){
       <div class="cval">${sc[s.key]} prosp.</div>
     </div>`).join('');
 
-  const maxV=Math.max(...VENDORS.map(v=>ventas.filter(x=>x.vendedor===v.name).reduce((s,x)=>s+x.total,0)),1);
-  if(CU === 'gerente') {
+  // Ranking: Gerente sees all, Vendedor sees personal stats
+  if(CU==='gerente'){
+    const maxV=Math.max(...VENDORS.map(v=>ventas.filter(x=>x.vendedor===v.name).reduce((s,x)=>s+(x.totalMxn||x.total||0),0)),1);
     document.getElementById('d-rank').innerHTML=VENDORS.map(v=>{
-      const vv=ventas.filter(x=>x.vendedor===v.name).reduce((s,x)=>s+x.total,0);
-      return `<div class="crow"><div class="clbl">${v.name}</div><div class="ctrk"><div class="cfil" style="width:${vv/maxV*100}%;background:${v.color}"></div></div><div class="cval">${f$(vv)}</div></div>`;
+      const vv=ventas.filter(x=>x.vendedor===v.name).reduce((s,x)=>s+(x.totalMxn||x.total||0),0);
+      return '<div class="crow"><div class="clbl">'+v.name+'</div><div class="ctrk"><div class="cfil" style="width:'+Math.round(vv/maxV*100)+'%;background:'+v.color+'"></div></div><div class="cval">'+f$(vv)+'</div></div>';
     }).join('');
   } else {
-    document.getElementById('d-rank').innerHTML = '<div style="color:#94a3b8;font-size:12px;text-align:center;padding:10px">Solo visible para el Gerente</div>';
+    // Vendedor: personal performance panel
+    const vObj = VENDORS.find(function(v){return v.id===CU;})||{name:'Yo',color:'#3b82f6',cuota:150000,bono:20};
+    const myV  = myventas();
+    const myPg = mypagos ? mypagos() : pagos;
+    const myTv = myV.reduce(function(s,v){return s+(v.totalMxn||v.total||0);},0);
+    const myTc = myPg.reduce(function(s,p){return s+(p.montoMxn||0);},0);
+    const myC  = myPg.reduce(function(s,p){return s+(p.comision||0);},0);
+    const cumpl= vObj.cuota ? myTv/vObj.cuota : 0;
+    const bono = cumpl>=1 ? myC*(vObj.bono/100) : 0;
+    document.getElementById('d-rank').innerHTML=
+      '<div style="display:flex;flex-direction:column;gap:10px">'+
+        '<div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:#475569">Cuota mensual</span><span style="font-weight:700">'+f$(vObj.cuota)+'</span></div>'+
+        '<div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:#475569">Mis ventas</span><span style="font-weight:700;color:#3b82f6">'+f$(myTv)+'</span></div>'+
+        '<div><div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;margin-bottom:4px"><span>Avance cuota</span><span>'+Math.round(cumpl*100)+'%</span></div>'+
+        '<div class="pbar"><div class="pfill" style="width:'+Math.min(cumpl,1)*100+'%;background:'+(cumpl>=1?'#22c55e':'#3b82f6')+'"></div></div></div>'+
+        '<div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:#475569">Cobrado</span><span style="font-weight:700;color:#22c55e">'+f$(myTc)+'</span></div>'+
+        '<div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:#475569">Mi comisión</span><span style="font-weight:700;color:#d97706">'+f$(myC)+'</span></div>'+
+        (bono>0?'<div style="background:#fef3c7;border-radius:8px;padding:8px 10px;display:flex;justify-content:space-between"><span style="color:#d97706;font-weight:700">🎉 Bono meta</span><span style="color:#d97706;font-weight:800">+'+f$(bono)+'</span></div>':'')+
+        '<div style="border-top:1px solid #e2e8f0;padding-top:8px;display:flex;justify-content:space-between"><span style="font-weight:700">Total a cobrar</span><span style="font-size:16px;font-weight:800;color:#8b5cf6">'+f$(myC+bono)+'</span></div>'+
+      '</div>';
   }
+  // Update panel title for vendedor
+  document.querySelectorAll('#page-dashboard .sh-t').forEach(function(el){
+    if(el.textContent==='Ranking Vendedores'||el.textContent==='Mi Desempeño'){
+      el.textContent = CU==='gerente' ? 'Ranking Vendedores' : 'Mi Desempeño';
+    }
+  });
 
   const urgL=ml.filter(l=>l.followup&&l.followup<=td&&l.stage!=='cierre').sort((a,b)=>a.followup.localeCompare(b.followup));
   document.getElementById('d-urgent').innerHTML=urgL.length
@@ -1656,12 +1682,23 @@ function rSeg(){
 
 // ═══════ VENTAS ═══════
 function rVKpis(){
-  const mv=myventas();
-  const tv=mv.reduce((s,v)=>s+v.total,0),tc=mv.reduce((s,v)=>s+v.cobrado,0),tcom=mv.reduce((s,v)=>s+v.comision,0);
+  const mv    = myventas();
+  const myPg  = mypagos ? mypagos() : pagos;
+  const tv    = mv.reduce((s,v)=>s+(v.totalMxn||v.total||0),0);
+  const tc    = myPg.reduce((s,p)=>s+(p.montoMxn||0),0);
+  const tcom  = myPg.reduce((s,p)=>s+(p.comision||0),0);
+  // Currency breakdown
+  const mvUsd    = mv.filter(v=>v.moneda==='USD');
+  const mvMxn    = mv.filter(v=>!v.moneda||v.moneda==='MXN');
+  const tvUsd    = mvUsd.reduce((s,v)=>s+(v.totalMxn||0),0);
+  const tvMxn    = mvMxn.reduce((s,v)=>s+(v.totalMxn||v.total||0),0);
+  const usdLabel = mvUsd.length ? `🇲🇽 ${f$(tvMxn)} + 💵 USD→${f$(tvUsd)}` : `${mv.length} ventas`;
   document.getElementById('v-kpis').innerHTML=[
-    {l:'Total Vendido',v:f$(tv),c:'bl'},{l:'Cobrado',v:f$(tc),c:'gr'},
-    {l:'Por Cobrar',v:f$(tv-tc),c:'am'},{l:'Comisiones',v:f$(tcom),c:'pu'},
-  ].map(k=>`<div class="kc ${k.c}"><div class="kl">${k.l}</div><div class="kv">${k.v}</div></div>`).join('');
+    {l:'Total Vendido MXN', v:f$(tv),    s:usdLabel,                        c:'bl'},
+    {l:'Total Cobrado',     v:f$(tc),    s:fP(tv?tc/tv:0)+' cobrado',        c:'gr'},
+    {l:'Por Cobrar',        v:f$(tv-tc), s:'Saldo pendiente',                c:'am'},
+    {l:'Comisiones',        v:f$(tcom),  s:'sobre cobros ÷1.16',             c:'pu'},
+  ].map(k=>`<div class="kc ${k.c}"><div class="kl">${k.l}</div><div class="kv">${k.v}</div><div class="ks">${k.s}</div></div>`).join('');
 }
 
 function rVentas(){
@@ -1711,16 +1748,24 @@ function rVentas(){
     const tasa   = getRateLista?getRateLista(lista):(LISTA_RATES?LISTA_RATES[lista]||5:5);
     const listaLabel={'l1':'L1','l2':'L2','l3':'L3'}[lista]||lista.toUpperCase();
     const esUSD  = v.moneda==='USD';
+    const monedaBadge = esUSD
+      ? '<span class="currency-badge badge-usd">💵 USD</span>'
+      : '<span class="currency-badge badge-mxn">🇲🇽 MXN</span>';
+    const tcCell = esUSD
+      ? `<span style="font-family:'DM Mono',monospace;font-size:11px;font-weight:700;color:#1d4ed8">$${v.tc}</span><div style="font-size:9px;color:#94a3b8">USD ${f$(v.total)}</div>`
+      : '<span style="color:#94a3b8;font-size:11px">—</span>';
     return `<tr>
       <td class="mono" style="white-space:nowrap">${v.fecha}</td>
       <td style="min-width:120px"><strong>${v.cliente||'—'}</strong>${v.razon?`<div style="font-size:10px;color:#94a3b8">${v.razon}</div>`:''}</td>
-      <td style="white-space:nowrap">${v.vendedor||'—'}</td>
-      <td style="min-width:100px">${v.producto||'—'}</td>
-      <td style="text-align:center">${pill(listaLabel,'#8b5cf6')}</td>
-      <td class="mono" style="white-space:nowrap">${f$(total)}${esUSD?`<div style="font-size:10px;color:#94a3b8">USD ${v.total}×${v.tc}</div>`:''}</td>
+      <td class="mob-hide" style="white-space:nowrap">${v.vendedor||'—'}</td>
+      <td class="mob-hide" style="min-width:100px">${v.producto||'—'}</td>
+      <td class="mob-hide" style="text-align:center">${pill(listaLabel,'#8b5cf6')}</td>
+      <td style="text-align:center">${monedaBadge}</td>
+      <td class="mob-hide" style="text-align:center">${tcCell}</td>
+      <td class="mono" style="white-space:nowrap;font-weight:700">${f$(total)}</td>
       <td class="mono" style="color:#16a34a;white-space:nowrap">${f$(cobrado)}</td>
       <td class="mono" style="color:${saldo>0?'#f59e0b':'#16a34a'};white-space:nowrap">${f$(saldo)}</td>
-      <td class="mono" style="color:#8b5cf6;white-space:nowrap">${tasa.toFixed(1)}%</td>
+      <td class="mob-hide mono" style="color:#8b5cf6;white-space:nowrap">${tasa.toFixed(1)}%</td>
       <td class="mono" style="color:#d97706;font-weight:700;white-space:nowrap">${f$(comTotal)}</td>
       <td>${saldo<=0?pill('✅ Liquidado','#16a34a'):pill('⚠ Pendiente','#f59e0b')}</td>
       <td style="white-space:nowrap">${saldo>0?`<button class="btn btn-amber btn-sm" onclick="openCobro(${v.id})">Cobrar</button>`:''} <button class="btn btn-out btn-sm" onclick="editVenta(${v.id},null)" style="padding:4px 7px;font-size:11px">✏️</button></td>
