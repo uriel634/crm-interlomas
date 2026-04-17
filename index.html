@@ -1161,8 +1161,15 @@ async function doClearData() {
 
   // STEP 3: Send empty arrays to Sheets — CRITICAL
   try {
+    // We send empty arrays for everything to ensure a full reset in the cloud
     await apiPost('full_backup', {
-      prospectos:[], ventas:[], productos:PRODS, vendedores:VENDORS
+      prospectos: [], 
+      ventas: [], 
+      productos: PRODS, 
+      vendedores: VENDORS,
+      pagos: [],
+      cortes: [],
+      activity: []
     });
     setStatus('✅ Base de datos completamente limpia','#22c55e');
     // Show confirmation
