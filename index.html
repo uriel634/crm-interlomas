@@ -448,7 +448,7 @@ textarea.fc{resize:vertical;min-height:70px}
       <div class="sh">
         <div class="sh-t">Pipeline de Prospectos</div>
         <div class="sh-r">
-          <select class="fc" style="width:auto;padding:5px 10px;font-size:12px" id="pip-mes" onchange="renderPipeline()">
+          <select class="fc" style="width:auto;padding:5px 10px;font-size:12px" id="pip-mes" onchange="rPipeline()">
             <option value="all">Todo el año</option>
             <option value="1">Enero</option>
             <option value="2">Febrero</option>
@@ -463,7 +463,7 @@ textarea.fc{resize:vertical;min-height:70px}
             <option value="11">Noviembre</option>
             <option value="12">Diciembre</option>
           </select>
-          <select class="fc gerente-only" style="width:auto;padding:5px 10px;font-size:12px;display:none" id="pip-fv" onchange="renderPipeline()">
+          <select class="fc gerente-only" style="width:auto;padding:5px 10px;font-size:12px;display:none" id="pip-fv" onchange="rPipeline()">
             <option value="all">Todos los vendedores</option>
           </select>
         </div>
@@ -579,6 +579,20 @@ textarea.fc{resize:vertical;min-height:70px}
 
       <div class="sh gerente-only" style="display:none"><div class="sh-t">Desglose Vendedor × Producto</div></div>
       <div class="twrap gerente-only" style="overflow-x:auto;display:none"><div id="cm-matrix"></div></div>
+
+      <div class="sh gerente-only" style="display:none;margin-top:10px">
+        <div class="sh-t">Cortes de Comisión</div>
+        <div class="sh-r">
+          <button class="btn btn-blue btn-sm gerente-only" style="display:none" onclick="generarCorte()">⚡ Generar corte del mes</button>
+        </div>
+      </div>
+      <div class="twrap gerente-only" style="display:none;margin-bottom:20px">
+        <div style="overflow-x:auto">
+          <table><thead><tr>
+            <th>Mes</th><th>Vendedor</th><th>Comisión</th><th>Generado</th><th>Estado</th><th>Acción</th>
+          </tr></thead><tbody id="cortes-tbody"></tbody></table>
+        </div>
+      </div>
     </div>
 
     <!-- CONFIG -->
@@ -703,7 +717,7 @@ textarea.fc{resize:vertical;min-height:70px}
         <input type="file" id="csv-inp" accept=".csv" style="display:none" onchange="handleFile(this.files[0])">
         <div id="csv-preview" style="display:none;margin-top:14px"></div>
         <div id="csv-result" style="margin-top:10px"></div>
-        <div id="csv-actions" style="display:none;margin-top:12px;display:none;justify-content:flex-end;gap:8px">
+        <div id="csv-actions" style="display:none;margin-top:12px;justify-content:flex-end;gap:8px">
           <button class="btn btn-out" onclick="clearCSV()">Cancelar</button>
           <button class="btn btn-blue" id="btn-imp" disabled onclick="importCSV()">Importar registros</button>
         </div>
@@ -781,8 +795,11 @@ textarea.fc{resize:vertical;min-height:70px}
     <div class="mobi on" onclick="mgo('dashboard',this)"><span class="mi">📊</span>Dashboard</div>
     <div class="mobi"    onclick="mgo('pipeline',this)"><span class="mi">🔄</span>Pipeline<span class="mobbdg" id="mnb1" style="display:none"></span></div>
     <div class="mobi"    onclick="mgo('seguimiento',this)"><span class="mi">⏰</span>Seg.<span class="mobbdg" id="mnb2" style="display:none"></span></div>
-    <div class="mobi"    onclick="openM('m-lead')"><span class="mi">➕</span>Nuevo</div>
+    <div class="mobi vendedor-only" onclick="openM('m-lead')"><span class="mi">➕</span>Nuevo</div>
     <div class="mobi"    onclick="mgo('comisiones',this)"><span class="mi">🏆</span>Comisiones</div>
+    <div class="mobi gerente-only" style="display:none" onclick="mgo('ventas',this)"><span class="mi">💰</span>Ventas</div>
+    <div class="mobi gerente-only" style="display:none" onclick="mgo('carga',this)"><span class="mi">📥</span>Carga</div>
+    <div class="mobi gerente-only" style="display:none" onclick="mgo('config',this)"><span class="mi">⚙️</span>Config</div>
   </div>
 </nav>
 
@@ -960,10 +977,10 @@ textarea.fc{resize:vertical;min-height:70px}
             <span id="adv-venta-arrow">▶</span> Campos adicionales (razón social, referencia, notas)
           </div>
         </div>
-        <div id="adv-venta-fields" style="display:none;width:100%;display:none" class="fg full">
+        <div id="adv-venta-fields" style="display:none;width:100%" class="fg full">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;width:100%">
             <div class="fg"><label class="fl">Razón Social</label><input class="fc" id="v-razon" placeholder="Empresa o persona moral"></div>
-            <div class="fg"><label class="fl">Referencia / Comprobante</label><input class="fc" id="v-ref" placeholder="Folio, núm. transferencia…"></div>
+            <div class="fg"><label class="fl">Referencia / Comprobante</label><input class="fc" id="v-ref2" placeholder="Folio, núm. transferencia…"></div>
           </div>
           <div class="fg" style="margin-top:10px"><label class="fl">Notas</label><textarea class="fc" id="v-nota" placeholder="Detalles del pedido…"></textarea></div>
         </div>
@@ -1258,9 +1275,6 @@ function ventaToSheet(v) {
     metodo:v.metodo, notas:v.notas||'', comision:v.comision };
 }
 
-function saveAll() {
-  updateStorageStatus();
-}
 
 const DEFAULT_PRODS = [
   {id:1, name:'Piso Porcelánico',    rate:3.0, price:522,   p_l1:522,   p_l2:450,   p_l3:400,   unit:'m²'},
@@ -1352,7 +1366,7 @@ let cortes     = []; // commission payment cuts: {id,mes,vendedor,comision,fecha
 // ═══════ UTILS ═══════
 const f$ = n=>'$'+Math.round(n||0).toLocaleString('es-MX');
 const fP = n=>((n||0)*100).toFixed(1)+'%';
-const today = ()=>new Date().toISOString().split('T')[0];
+const today = ()=>{const d=new Date();return[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
 const ddiff = d=>Math.round((new Date()-new Date(d))/86400000);
 const si = k=>STAGES.find(s=>s.key===k)||STAGES[0];
 const vc = n=>{const v=VENDORS.find(x=>x.name===n);return v?v.color:'#3b82f6';}
@@ -1386,12 +1400,12 @@ function rebuildPagosFromVentas(){
 
 function myleads(){
   if(CU==='gerente')return leads;
-  const m={v1:'Vendedor 1',v2:'Vendedor 2',v3:'Vendedor 3'};
+  const m={v1:VENDORS[0]?.name,v2:VENDORS[1]?.name,v3:VENDORS[2]?.name};
   return leads.filter(l=>l.vendedor===m[CU]);
 }
 function myventas(){
   if(CU==='gerente')return ventas;
-  const m={v1:'Vendedor 1',v2:'Vendedor 2',v3:'Vendedor 3'};
+  const m={v1:VENDORS[0]?.name,v2:VENDORS[1]?.name,v3:VENDORS[2]?.name};
   return ventas.filter(v=>v.vendedor===m[CU]);
 }
 function mypagos(){
@@ -1556,7 +1570,7 @@ function rDash(){
   const mv0  = myventas();
   const ml0  = myleads().filter(l=>l.stage!=='perdido');
   const mv   = dMes==='all' ? mv0 : mv0.filter(v=>{const d=new Date(v.fecha);return d.getMonth()+1===parseInt(dMes);});
-  const ml   = dMes==='all' ? ml0 : ml0;
+  const ml   = dMes==='all' ? ml0 : ml0.filter(l=>{const d=new Date(l.fecha);return d.getMonth()+1===parseInt(dMes);});
   const myPgs= mypagos ? mypagos() : pagos;
   const mvIds= mv.map(v=>v.id);
 
@@ -1704,7 +1718,7 @@ function rPipeline(){
   const pMes = document.getElementById('pip-mes')?.value||'all';
   let ml = myleads();
   if(fv!=='all') ml=ml.filter(l=>l.vendedor===fv);
-  if(pMes!=='all') ml=ml.filter(l=>l.fecha&&new Date(l.fecha).getMonth()+1===parseInt(pMes)&&new Date(l.fecha).getFullYear()===2026);
+  if(pMes!=='all') ml=ml.filter(l=>l.fecha&&new Date(l.fecha).getMonth()+1===parseInt(pMes)&&new Date(l.fecha).getFullYear()===new Date().getFullYear());
   // Vendedor selector only visible to gerente
   const pfv=document.getElementById('pip-fv');
   if(pfv) pfv.style.display = CU==='gerente' ? '' : 'none';
@@ -2106,7 +2120,7 @@ function generarCorte(){
   const mes   = document.getElementById('cm-mes')?.value||'all';
   const now   = new Date();
   const mesLabel = mes==='all'?now.toLocaleString('es-MX',{month:'long',year:'numeric'}):
-    new Date(2026,parseInt(mes)-1).toLocaleString('es-MX',{month:'long',year:'numeric'});
+    new Date(new Date().getFullYear(),parseInt(mes)-1).toLocaleString('es-MX',{month:'long',year:'numeric'});
 
   // Check if corte already exists for this month
   const existing = cortes.filter(c=>c.mes===mesLabel);
@@ -2174,7 +2188,7 @@ function rCortes(){
 function exportarReporte(){
   const mes   = document.getElementById('d-mes')?.value||'all';
   const now   = new Date();
-  const mesLabel = mes==='all'?'Todo 2026':new Date(2026,parseInt(mes)-1).toLocaleString('es-MX',{month:'long',year:'numeric'});
+  const yr=new Date().getFullYear();const mesLabel = mes==='all'?'Todo '+yr:new Date(yr,parseInt(mes)-1).toLocaleString('es-MX',{month:'long',year:'numeric'});
 
   let data=myventas();
   if(mes!=='all'){const m=parseInt(mes);data=data.filter(v=>{const d=new Date(v.fecha);return d.getMonth()+1===m;});}
@@ -2281,7 +2295,7 @@ function saveListaRates(){
 
 function addProd(){
   const id=Date.now();
-  PRODS.push({id,name:'Nuevo producto',rate:3.0,price:0,unit:'m²'});
+  PRODS.push({id,name:'Nuevo producto',rate:3.0,price:0,p_l1:0,p_l2:0,p_l3:0,unit:'m²'});
   rConfig();fillSelects();
 }
 function rmProd(id){
@@ -2347,7 +2361,7 @@ function parseCSV(txt){
     <th>Fecha</th><th>Cliente</th><th>Vendedor</th><th>Producto</th><th>Total</th><th>Cobrado</th><th>Comisión est.</th>
   </tr></thead><tbody>${csvRows.map(r=>{
     const tot=parseFloat(r.total)||0,cob=parseFloat(r.cobrado)||0,rate=pRate(r.producto);
-    return `<tr><td class="mono">${r.fecha}</td><td>${r.cliente}</td><td>${r.vendedor}</td><td>${r.producto}</td><td class="mono">${f$(tot)}</td><td class="mono">${f$(cob)}</td><td class="mono" style="color:#d97706">${f$(tot*rate)}</td></tr>`;
+    return `<tr><td class="mono">${r.fecha}</td><td>${r.cliente}</td><td>${r.vendedor}</td><td>${r.producto}</td><td class="mono">${f$(tot)}</td><td class="mono">${f$(cob)}</td><td class="mono" style="color:#d97706">${f$(calcComision(cob||tot,r.lista||'l1'))}</td></tr>`;
   }).join('')}</tbody></table></div></div>`;
   const ac=document.getElementById('csv-actions');
   ac.style.display='flex';
@@ -2358,7 +2372,7 @@ function importCSV(){
   if(!csvRows.length)return;
   const imp=csvRows.map(r=>{
     const tot=parseFloat(r.total)||0,cob=parseFloat(r.cobrado)||0,rate=pRate(r.producto);
-    return{id:nVid++,fecha:r.fecha,cliente:r.cliente,vendedor:r.vendedor,producto:r.producto,total:tot,cobrado:cob,pedido:r.pedido||('PED-'+String(nVid).padStart(3,'0')),metodo:r.metodo||'Transferencia',notas:r.notas||'',comision:tot*rate};
+    return{id:nVid++,fecha:r.fecha,cliente:r.cliente,vendedor:r.vendedor,producto:r.producto,lista:r.lista||'l1',moneda:r.moneda||'MXN',total:tot,totalMxn:tot,cobrado:cob,cobradoMxn:cob,pedido:r.pedido||('PED-'+String(nVid).padStart(3,'0')),metodo:r.metodo||'Transferencia',notas:r.notas||'',comision:calcComision(cob||tot,r.lista||'l1')};
   });
   ventas.push(...imp);
   const tm=imp.reduce((s,v)=>s+v.total,0);
@@ -2414,7 +2428,7 @@ function loadManual(){
     if(!cli||!tot)return;
     const prod=document.getElementById('mr-p-'+id)?.value;
     const cob=parseFloat(document.getElementById('mr-cb-'+id)?.value)||0;
-    ventas.push({id:nVid++,fecha:el.value,cliente:cli,vendedor:document.getElementById('mr-v-'+id)?.value,producto:prod,total:tot,cobrado:cob,pedido:'PED-'+String(nVid).padStart(3,'0'),metodo:'Transferencia',notas:'',comision:tot*pRate(prod)});
+    ventas.push({id:nVid++,fecha:el.value,cliente:cli,vendedor:document.getElementById('mr-v-'+id)?.value,producto:prod,lista:'l1',moneda:'MXN',total:tot,totalMxn:tot,cobrado:cob,cobradoMxn:cob,pedido:'PED-'+String(nVid).padStart(3,'0'),metodo:'Transferencia',notas:'',comision:calcComision(cob||tot,'l1')});
     loaded++;
   });
   if(loaded){
@@ -2615,9 +2629,10 @@ function lostL(id){
 }
 function doLost(){
   const lid=lostTargetId;
-  leads=leads.filter(l=>l.id!==lid);
-  setStatus('⏳ Eliminando…','#f59e0b');
-  syncDeleteLead(lid).then(()=>setStatus('✅ Prospecto eliminado','#22c55e'));
+  const l=leads.find(x=>x.id===lid);
+  if(l){l.stage='perdido';l.fechaPerdido=today();}
+  setStatus('⏳ Guardando…','#f59e0b');
+  if(l) syncLead(l).then(()=>setStatus('✅ Prospecto marcado como perdido','#22c55e'));
   closeM('m-confirm-lost'); badges();
   render(document.querySelector('.page.on')?.id?.replace('page-','')||'dashboard');
 }
@@ -2649,13 +2664,13 @@ function pickStage(btn,stage,color){
 function saveLead(){
   const nom=document.getElementById('l-nom').value.trim(),tel=document.getElementById('l-tel').value.trim();
   if(!nom||!tel){alert('Nombre y teléfono son obligatorios');return;}
-  leads.push({id:nLid++,nombre:nom,tel,red:document.getElementById('l-red').value,medio:document.getElementById('l-med').value,vendedor:document.getElementById('l-vend').value,producto:document.getElementById('l-prod').value,monto:parseFloat(document.getElementById('l-monto').value)||0,followup:document.getElementById('l-fol').value,stage:currentStage||'lead',obs:document.getElementById('l-obs').value,fecha:today()});
+  leads.push({id:nLid++,nombre:nom,tel,red:document.getElementById('l-red').value,medio:document.getElementById('l-med').value,vendedor:document.getElementById('l-vend').value,producto:document.getElementById('l-prod').value,monto:parseFloat(document.getElementById('l-monto').value)||0,followup:document.getElementById('l-fol').value,stage:currentStage||'lead',obs:document.getElementById('l-obs').value,fecha:today(),razon:document.getElementById('l-razon')?.value||'',proyecto:document.getElementById('l-proyecto')?.value||'',m2:parseFloat(document.getElementById('l-m2')?.value)||0,finicio:document.getElementById('l-finicio')?.value||'',moneda:document.getElementById('l-moneda')?.value||'MXN',tcLead:parseFloat(document.getElementById('l-tc-lead')?.value)||1});
   activity.unshift({text:`<strong>${document.getElementById('l-vend').value}</strong> ingresó prospecto <strong>${nom}</strong>`,time:'Ahora',color:'#3b82f6'});
   const newLead = leads[leads.length-1];
   setStatus('⏳ Guardando…', '#f59e0b');
   syncLead(newLead).then(()=>setStatus('✅ Guardado en Google Sheets','#22c55e'));
   syncActivity({fecha:today(),texto:`${newLead.vendedor} ingresó prospecto ${newLead.nombre}`,color:'#3b82f6'});
-  closeM('m-lead');['l-nom','l-tel','l-red','l-monto','l-obs'].forEach(id=>document.getElementById(id).value='');
+  closeM('m-lead');['l-nom','l-tel','l-red','l-monto','l-obs','l-razon','l-proyecto','l-m2','l-finicio'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});currentStage='lead';document.querySelectorAll('#l-stg .sbtn').forEach((b,i)=>{b.classList.toggle('on',i===0);b.style.color=i===0?(STAGES[0]?.color||''):'';b.style.borderColor=i===0?(STAGES[0]?.color||''):'';});
   badges();
 }
 
@@ -3093,7 +3108,7 @@ function globalSearch(q){
     html+='<div style="padding:7px 12px 4px;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase">Prospectos</div>';
     html+=matchLeads.map(function(l){
       var s=si(l.stage);
-      return '<div onclick="searchSelectLead('+l.id+')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-top:1px solid #f1f5f9" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">'+
+      return '<div class="sr-item" onclick="searchSelectLead('+l.id+')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-top:1px solid #f1f5f9" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">'+
         '<div style="width:28px;height:28px;border-radius:50%;background:'+s.color+'20;color:'+s.color+';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">'+l.nombre[0].toUpperCase()+'</div>'+
         '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+l.nombre+'</div>'+
         '<div style="font-size:10px;color:#94a3b8">'+s.label+' · '+(l.vendedor||'')+'</div></div>'+
@@ -3106,7 +3121,7 @@ function globalSearch(q){
       var vPgs=pagos.filter(function(p){return p.ventaId===v.id;});
       var cobrado=vPgs.reduce(function(s,p){return s+(p.montoMxn||0);},0);
       var saldo=(v.totalMxn||v.total||0)-cobrado;
-      return '<div onclick="closeSearch();go(\'ventas\',null)" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-top:1px solid #f1f5f9" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">'+
+      return '<div class="sr-item" onclick="searchSelectVenta('+v.id+')" style="padding:8px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-top:1px solid #f1f5f9" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">'+
         '<div style="width:28px;height:28px;border-radius:50%;background:#22c55e20;color:#16a34a;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">💰</div>'+
         '<div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+v.cliente+'</div>'+
         '<div style="font-size:10px;color:#94a3b8">'+(v.pedido||'')+' · '+v.fecha+'</div></div>'+
