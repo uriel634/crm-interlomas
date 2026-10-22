@@ -1120,7 +1120,7 @@ let loadLog = [];
 let rowId = 0;
 let nLid = 10, nVid = 10;
 
-// ═══════ PERSISTENCIA — Google Sheets ═══════
+// ═══════ PERSISTENCIA — Cloudflare D1 ═══════
 const API_URL = '/api';
 
 // Status indicator
@@ -1150,7 +1150,7 @@ async function apiPost(action, data) {
   return j.data;
 }
 
-// ── LS object — same interface, now writes to Google Sheets ──
+// ── LS object ──
 const LS = {
   KEYS: {}, // not used — kept for compatibility
 
@@ -1178,15 +1178,15 @@ async function doClearData() {
   leads=[]; ventas=[]; pagos=[]; activity=[]; loadLog=[];
   nLid=1; nVid=1;
 
-  // STEP 2: Set flag so initApp won't reload from Sheets on next run
+  // STEP 2: Set flag so initApp won't reload on next run
   try { sessionStorage.setItem('crm_cleared','1'); } catch(e){}
 
   fillSelects(); badges();
   render(document.querySelector('.page.on')?.id?.replace('page-','')||'dashboard');
   updateStorageStatus();
-  setStatus('🗑 Borrando en Google Sheets…','#f59e0b');
+  setStatus('🗑 Borrando en la base de datos…','#f59e0b');
 
-  // STEP 3: Send empty arrays to Sheets — CRITICAL
+  // STEP 3: Reset all tables in D1
   try {
     // We send empty arrays for everything to ensure a full reset in the cloud
     await apiPost('full_backup', {
@@ -1206,7 +1206,7 @@ async function doClearData() {
     document.body.appendChild(msg);
     setTimeout(()=>msg.remove(),5000);
   } catch(e) {
-    setStatus('⚠️ Borrado local — verifica conexión para sincronizar Sheets','#f59e0b');
+    setStatus('⚠️ Borrado local — sin conexión a la nube','#f59e0b');
   }
 }
 
@@ -1228,7 +1228,7 @@ async function importBackupFile(file) {
       if((!data.pagos||!data.pagos.length) && ventas.length > 0){
         rebuildPagosFromVentas();
       }
-      setStatus('⏳ Subiendo backup a Google Sheets…', '#f59e0b');
+      setStatus('⏳ Subiendo backup a la nube…', '#f59e0b');
       await apiPost('full_backup', { prospectos:leads, ventas:ventas, productos:PRODS, vendedores:VENDORS });
       fillSelects(); badges();
       render(document.querySelector('.page.on')?.id?.replace('page-','')||'dashboard');
@@ -1244,12 +1244,12 @@ async function saveAll() {
 }
 
 async function syncLead(lead) {
-  try { await apiPost('save_lead', leadToSheet(lead)); }
+  try { await apiPost('save_lead', leadToAPI(lead)); }
   catch(e) { setStatus('⚠️ Sin conexión — datos en memoria', '#f59e0b'); }
 }
 
 async function syncVenta(venta) {
-  try { await apiPost('save_venta', ventaToSheet(venta)); }
+  try { await apiPost('save_venta', ventaToAPI(venta)); }
   catch(e) { setStatus('⚠️ Sin conexión — datos en memoria', '#f59e0b'); }
 }
 
@@ -1260,12 +1260,12 @@ async function syncDeleteLead(id) {
 
 async function syncProductos() {
   try { await apiPost('save_productos', PRODS); }
-  catch(e) { setStatus('⚠️ No se pudo guardar en Sheets', '#f59e0b'); }
+  catch(e) { setStatus('⚠️ Sin conexión — datos en memoria', '#f59e0b'); }
 }
 
 async function syncVendedores() {
   try { await apiPost('save_vendedores', VENDORS); }
-  catch(e) { setStatus('⚠️ No se pudo guardar en Sheets', '#f59e0b'); }
+  catch(e) { setStatus('⚠️ Sin conexión — datos en memoria', '#f59e0b'); }
 }
 
 async function syncActivity(entry) {
@@ -1273,13 +1273,13 @@ async function syncActivity(entry) {
   catch(e) { /* silent fail */ }
 }
 
-// Map objects to sheet format
-function leadToSheet(l) {
+// Map objects to API payload format
+function leadToAPI(l) {
   return { id:l.id, nombre:l.nombre, tel:l.tel, red:l.red||'', medio:l.medio,
     vendedor:l.vendedor, producto:l.producto, monto:l.monto||0,
     stage:l.stage, obs:l.obs||'', followup:l.followup||'', fecha:l.fecha };
 }
-function ventaToSheet(v) {
+function ventaToAPI(v) {
   return { id:v.id, fecha:v.fecha, cliente:v.cliente, vendedor:v.vendedor,
     producto:v.producto, total:v.total, cobrado:v.cobrado, pedido:v.pedido,
     metodo:v.metodo, notas:v.notas||'', comision:v.comision };
@@ -1326,7 +1326,7 @@ const DEFAULT_VENDORS = [
   {id:'v2',name:'Vendedor 2',color:'#22c55e',cuota:150000,bono:20},
   {id:'v3',name:'Vendedor 3',color:'#f59e0b',cuota:150000,bono:20},
 ];
-// PINs are stored ONLY in Google Sheets — never in this file
+// PINs are stored ONLY in D1 — never in client-side code
 const GERENTE_PIN = { id:'gerente' };
 
 // Loaded async in initApp()
@@ -2109,14 +2109,14 @@ async function savePins() {
     return;
   }
 
-  setStatus('⏳ Guardando PINs en Google Sheets…', '#f59e0b');
+  setStatus('⏳ Guardando PINs…', '#f59e0b');
   try {
     await apiPost('save_pins', { pins });
     setStatus('✅ PINs actualizados de forma segura', '#22c55e');
     document.querySelectorAll('[id^="pin-new-"]').forEach(el => el.value = '');
     const msg = document.getElementById('save-ok');
     if (msg) {
-      msg.textContent = '✅ PINs guardados en Sheets';
+      msg.textContent = '✅ PINs guardados';
       msg.style.display = 'block';
       setTimeout(() => { msg.style.display='none'; msg.textContent='✅ Cambios guardados'; }, 2500);
     }
@@ -2321,7 +2321,7 @@ function saveProd(){
   }));
   fillSelects();
   setStatus('⏳ Guardando productos…','#f59e0b');
-  syncProductos().then(()=>setStatus('✅ Productos guardados en Sheets','#22c55e'));
+  syncProductos().then(()=>setStatus('✅ Productos guardados','#22c55e'));
   const msg=document.getElementById('save-ok');
   msg.style.display='block';setTimeout(()=>msg.style.display='none',2500);
 }
@@ -2331,7 +2331,7 @@ function saveCuotas(){
     bono:parseFloat(document.getElementById('cb-'+v.id)?.value)||v.bono,
   }));
   setStatus('⏳ Guardando cuotas…','#f59e0b');
-  syncVendedores().then(()=>setStatus('✅ Cuotas guardadas en Sheets','#22c55e'));
+  syncVendedores().then(()=>setStatus('✅ Cuotas guardadas','#22c55e'));
 }
 
 // ═══════ CARGA DIARIA ═══════
@@ -2388,9 +2388,9 @@ function importCSV(){
   const tm=imp.reduce((s,v)=>s+v.total,0);
   loadLog.unshift({fecha:new Date().toLocaleDateString('es-MX'),usuario:'Capturista',registros:imp.length,monto:tm,estado:'✅ OK'});
   activity.unshift({text:`Carga CSV — <strong>${imp.length} ventas</strong> importadas`,time:'Ahora',color:'#14b8a6'});
-  setStatus('⏳ Subiendo a Google Sheets…','#f59e0b');
+  setStatus('⏳ Guardando en la nube…','#f59e0b');
   Promise.all(imp.map(v=>syncVenta(v)))
-    .then(()=>setStatus(`✅ ${imp.length} ventas en Sheets`,'#22c55e'));
+    .then(()=>setStatus(`✅ ${imp.length} ventas importadas`,'#22c55e'));
   showRes('ok',`✅ ${imp.length} ventas importadas. Total: ${f$(tm)}`);
   clearCSV();rLog();badges();
 }
@@ -2678,7 +2678,7 @@ function saveLead(){
   activity.unshift({text:`<strong>${document.getElementById('l-vend').value}</strong> ingresó prospecto <strong>${nom}</strong>`,time:'Ahora',color:'#3b82f6'});
   const newLead = leads[leads.length-1];
   setStatus('⏳ Guardando…', '#f59e0b');
-  syncLead(newLead).then(()=>setStatus('✅ Guardado en Google Sheets','#22c55e'));
+  syncLead(newLead).then(()=>setStatus('✅ Guardado en la nube','#22c55e'));
   syncActivity({fecha:today(),texto:`${newLead.vendedor} ingresó prospecto ${newLead.nombre}`,color:'#3b82f6'});
   closeM('m-lead');['l-nom','l-tel','l-red','l-monto','l-obs','l-razon','l-proyecto','l-m2','l-finicio'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});currentStage='lead';document.querySelectorAll('#l-stg .sbtn').forEach((b,i)=>{b.classList.toggle('on',i===0);b.style.color=i===0?(STAGES[0]?.color||''):'';b.style.borderColor=i===0?(STAGES[0]?.color||''):'';});
   badges();
@@ -2737,7 +2737,7 @@ function saveVenta(){
   activity.unshift({text:`<strong>${document.getElementById('v-vend').value}</strong> registró venta <strong>${cli}</strong> — ${f$(tot)}`,time:'Ahora',color:'#22c55e'});
   const newVenta = ventas[ventas.length-1];
   setStatus('⏳ Guardando…', '#f59e0b');
-  syncVenta(newVenta).then(()=>setStatus('✅ Guardado en Google Sheets','#22c55e'));
+  syncVenta(newVenta).then(()=>setStatus('✅ Guardado en la nube','#22c55e'));
   syncActivity({fecha:today(),texto:`${newVenta.vendedor} registró venta ${newVenta.cliente} — $${newVenta.total}`,color:'#22c55e'});
   closeM('m-venta');['v-cli','v-ped','v-tot','v-cob','v-nota'].forEach(id=>document.getElementById(id).value='');
   calcComm();badges();
@@ -2844,7 +2844,7 @@ async function initApp() {
   fillSelects();
   setStatus('⏳ Conectando…', '#f59e0b');
 
-  // STEP 2 — Load real data from Sheets in background
+  // STEP 2 — Load real data from D1 in background
   // Skip if user just cleared data (sessionStorage flag)
   let justCleared = false;
   try { justCleared = sessionStorage.getItem('crm_cleared')==='1'; } catch(e){}
@@ -2852,11 +2852,11 @@ async function initApp() {
     try { sessionStorage.removeItem('crm_cleared'); } catch(e){}
     setStatus('✅ Base de datos limpia','#22c55e');
     badges(); updateStorageStatus();
-    return; // don't reload from Sheets
+    return; // don't reload from D1
   }
 
   try {
-    await apiGet('init'); // also creates _Pines sheet if missing
+    await apiGet('init'); // creates tables if missing
     const all = await apiGet('all');
 
     if (all.productos  && all.productos.length)  PRODS   = all.productos.map(p=>({...p, rate:parseFloat(p.rate)||3, price:parseFloat(p.price)||0}));
@@ -2867,15 +2867,15 @@ async function initApp() {
 
     if(leads.length)  nLid = Math.max(...leads.map(l=>parseInt(l.id)||0)) + 1;
     if(ventas.length) nVid = Math.max(...ventas.map(v=>parseInt(v.id)||0)) + 1;
-    // Rebuild pagos from venta.cobrado if none loaded from Sheets
+    // Rebuild pagos from venta.cobrado if none in D1
     if(pagos.length === 0 && ventas.length > 0){ rebuildPagosFromVentas(); }
 
-    // Rebuild login with real vendor names from Sheets
+    // Rebuild login with real vendor names from D1
     fillSelects();
     buildLoginScreen();
     setStatus('✅ Listo · ' + leads.length + ' prospectos', '#22c55e');
   } catch(e) {
-    console.warn('Sin conexión a Sheets:', e);
+    console.warn('Sin conexión a D1:', e);
     setStatus('⚠️ Sin conexión', '#f59e0b');
   }
 
