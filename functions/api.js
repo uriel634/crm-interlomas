@@ -40,13 +40,14 @@ async function handleGet(action, DB) {
   }
 
   if (action === 'all') {
-    const [productos, vendedores, prospectos, ventas, actividad, pines] = await Promise.all([
+    const [productos, vendedores, prospectos, ventas, actividad, pines, pagos] = await Promise.all([
       DB.prepare('SELECT * FROM productos').all(),
       DB.prepare('SELECT * FROM vendedores').all(),
       DB.prepare('SELECT * FROM prospectos ORDER BY id').all(),
       DB.prepare('SELECT * FROM ventas ORDER BY id').all(),
       DB.prepare('SELECT * FROM actividad ORDER BY id DESC LIMIT 50').all(),
       DB.prepare('SELECT * FROM pines').all(),
+      DB.prepare('SELECT * FROM pagos ORDER BY id').all(),
     ]);
     return {
       productos:  productos.results,
@@ -55,6 +56,7 @@ async function handleGet(action, DB) {
       ventas:     ventas.results,
       actividad:  actividad.results,
       pines:      pines.results,
+      pagos:      pagos.results,
     };
   }
 
@@ -93,6 +95,18 @@ async function handlePost(action, data, DB) {
           n(data.total), n(data.totalMxn ?? data.total), n(data.cobrado),
           n(data.cobradoMxn ?? data.cobrado), s(data.pedido), s(data.metodo),
           s(data.notas), n(data.comision), s(data.razon), s(data.ref)
+        ).run();
+      return {};
+
+    case 'save_pago':
+      await DB.prepare(`
+        INSERT OR REPLACE INTO pagos
+          (id, ventaId, fecha, monto, montoMxn, moneda, tc, metodo, notas, comision)
+        VALUES (?,?,?,?,?,?,?,?,?,?)`)
+        .bind(
+          data.id, data.ventaId, s(data.fecha),
+          n(data.monto), n(data.montoMxn ?? data.monto), s(data.moneda, 'MXN'),
+          n(data.tc, 1), s(data.metodo), s(data.notas), n(data.comision)
         ).run();
       return {};
 
@@ -138,8 +152,15 @@ async function handlePost(action, data, DB) {
     }
 
     case 'full_backup': {
-      const { prospectos, ventas: vs, productos, vendedores } = data;
+      const { prospectos, ventas: vs, productos, vendedores, activity } = data;
       const stmts = [];
+
+      if (activity !== undefined) {
+        stmts.push(DB.prepare('DELETE FROM actividad'));
+        for (const a of activity)
+          stmts.push(DB.prepare(`INSERT INTO actividad (fecha, texto, color) VALUES (?,?,?)`)
+            .bind(s(a.fecha||a.time), s(a.texto||a.text), s(a.color,'#3b82f6')));
+      }
 
       // Use !== undefined so DELETE runs even when the array is empty (clear operation)
       if (productos !== undefined) {
