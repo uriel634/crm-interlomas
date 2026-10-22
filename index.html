@@ -1239,9 +1239,7 @@ async function importBackupFile(file) {
   r.readAsText(file);
 }
 
-async function saveAll() {
-  updateStorageStatus();
-}
+function saveAll() { updateStorageStatus(); }
 
 async function syncLead(lead) {
   try { await apiPost('save_lead', leadToAPI(lead)); }
@@ -1273,16 +1271,26 @@ async function syncActivity(entry) {
   catch(e) { /* silent fail */ }
 }
 
-// Map objects to API payload format
+// Map objects to API payload format — all fields must be included
 function leadToAPI(l) {
-  return { id:l.id, nombre:l.nombre, tel:l.tel, red:l.red||'', medio:l.medio,
-    vendedor:l.vendedor, producto:l.producto, monto:l.monto||0,
-    stage:l.stage, obs:l.obs||'', followup:l.followup||'', fecha:l.fecha };
+  return {
+    id:l.id, nombre:l.nombre, tel:l.tel, red:l.red||'', medio:l.medio,
+    vendedor:l.vendedor, producto:l.producto||'', monto:l.monto||0,
+    stage:l.stage||'lead', obs:l.obs||'', followup:l.followup||'', fecha:l.fecha||'',
+    razon:l.razon||'', proyecto:l.proyecto||'', m2:l.m2||0,
+    finicio:l.finicio||'', moneda:l.moneda||'MXN', tcLead:l.tcLead||1,
+    fechaPerdido:l.fechaPerdido||''
+  };
 }
 function ventaToAPI(v) {
-  return { id:v.id, fecha:v.fecha, cliente:v.cliente, vendedor:v.vendedor,
-    producto:v.producto, total:v.total, cobrado:v.cobrado, pedido:v.pedido,
-    metodo:v.metodo, notas:v.notas||'', comision:v.comision };
+  return {
+    id:v.id, fecha:v.fecha, cliente:v.cliente, vendedor:v.vendedor,
+    producto:v.producto, lista:v.lista||'l1', moneda:v.moneda||'MXN', tc:v.tc||1,
+    total:v.total||0, totalMxn:v.totalMxn ?? v.total ?? 0,
+    cobrado:v.cobrado||0, cobradoMxn:v.cobradoMxn ?? v.cobrado ?? 0,
+    pedido:v.pedido||'', metodo:v.metodo||'', notas:v.notas||'',
+    comision:v.comision||0, razon:v.razon||'', ref:v.ref||''
+  };
 }
 
 
@@ -1366,10 +1374,10 @@ const DEFAULT_ACTIVITY = [
   {text:'Carga CSV — 3 ventas importadas',time:'Hace 2d',color:'#14b8a6'},
 ];
 
-// Loaded async in initApp()
-let leads    = JSON.parse(JSON.stringify(DEFAULT_LEADS));
-let ventas   = JSON.parse(JSON.stringify(DEFAULT_VENTAS));
-let activity = JSON.parse(JSON.stringify(DEFAULT_ACTIVITY));
+// Loaded from D1 in initApp() — start empty, never show demo data to real users
+let leads    = [];
+let ventas   = [];
+let activity = [];
 let pagos      = []; // payment history: {id,ventaId,fecha,monto,moneda,tc,montoMxn,metodo,referencia,comision}
 let cortes     = []; // commission payment cuts: {id,mes,vendedor,comision,fechaPago,pagado}
 
@@ -2859,11 +2867,12 @@ async function initApp() {
     await apiGet('init'); // creates tables if missing
     const all = await apiGet('all');
 
-    if (all.productos  && all.productos.length)  PRODS   = all.productos.map(p=>({...p, rate:parseFloat(p.rate)||3, price:parseFloat(p.price)||0}));
-    if (all.vendedores && all.vendedores.length)  VENDORS = all.vendedores.map(v=>({...v, cuota:parseFloat(v.cuota)||150000, bono:parseFloat(v.bono)||20}));
-    if (all.prospectos && all.prospectos.length)  leads   = all.prospectos.map(l=>({...l, monto:parseFloat(l.monto)||0, id:parseInt(l.id)||l.id}));
-    if (all.ventas     && all.ventas.length)      ventas  = all.ventas.map(v=>({...v, total:parseFloat(v.total)||0, cobrado:parseFloat(v.cobrado)||0, comision:parseFloat(v.comision)||0, id:parseInt(v.id)||v.id}));
-    if (all.actividad  && all.actividad.length)   activity= all.actividad.map(a=>({text:a.texto, time:a.fecha, color:a.color})).reverse();
+    // Always overwrite from D1 — including empty arrays (cleared state)
+    if (all.productos)  PRODS   = all.productos.length  ? all.productos.map(p=>({...p, rate:parseFloat(p.rate)||3, price:parseFloat(p.price)||0}))  : DEFAULT_PRODS;
+    if (all.vendedores) VENDORS = all.vendedores.length ? all.vendedores.map(v=>({...v, cuota:parseFloat(v.cuota)||150000, bono:parseFloat(v.bono)||20})) : DEFAULT_VENDORS;
+    leads   = all.prospectos ? all.prospectos.map(l=>({...l, monto:parseFloat(l.monto)||0, m2:parseFloat(l.m2)||0, tcLead:parseFloat(l.tcLead)||1, id:parseInt(l.id)||l.id})) : [];
+    ventas  = all.ventas     ? all.ventas.map(v=>({...v, total:parseFloat(v.total)||0, totalMxn:parseFloat(v.totalMxn)||parseFloat(v.total)||0, cobrado:parseFloat(v.cobrado)||0, cobradoMxn:parseFloat(v.cobradoMxn)||parseFloat(v.cobrado)||0, tc:parseFloat(v.tc)||1, comision:parseFloat(v.comision)||0, id:parseInt(v.id)||v.id})) : [];
+    activity= all.actividad  ? all.actividad.map(a=>({text:a.texto, time:a.fecha, color:a.color})).reverse() : [];
 
     if(leads.length)  nLid = Math.max(...leads.map(l=>parseInt(l.id)||0)) + 1;
     if(ventas.length) nVid = Math.max(...ventas.map(v=>parseInt(v.id)||0)) + 1;
