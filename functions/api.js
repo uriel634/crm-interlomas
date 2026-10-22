@@ -141,26 +141,28 @@ async function handlePost(action, data, DB) {
       const { prospectos, ventas: vs, productos, vendedores } = data;
       const stmts = [];
 
-      if (productos?.length) {
+      // Use !== undefined so DELETE runs even when the array is empty (clear operation)
+      if (productos !== undefined) {
         stmts.push(DB.prepare('DELETE FROM productos'));
         for (const p of productos)
           stmts.push(DB.prepare(`INSERT INTO productos (id, name, rate, price, p_l1, p_l2, p_l3, unit) VALUES (?,?,?,?,?,?,?,?)`)
             .bind(p.id, s(p.name), n(p.rate,3), n(p.price), n(p.p_l1), n(p.p_l2), n(p.p_l3), s(p.unit,'m²')));
       }
-      if (vendedores?.length) {
+      if (vendedores !== undefined) {
         stmts.push(DB.prepare('DELETE FROM vendedores'));
         for (const v of vendedores)
           stmts.push(DB.prepare(`INSERT INTO vendedores (id, name, color, cuota, bono) VALUES (?,?,?,?,?)`)
             .bind(s(v.id), s(v.name), s(v.color,'#3b82f6'), n(v.cuota,150000), n(v.bono,20)));
       }
-      if (prospectos?.length) {
+      if (prospectos !== undefined) {
         stmts.push(DB.prepare('DELETE FROM prospectos'));
         for (const l of prospectos)
           stmts.push(DB.prepare(`INSERT INTO prospectos (id,nombre,tel,red,medio,vendedor,producto,monto,followup,stage,obs,fecha,razon,proyecto,m2,finicio,moneda,tcLead,fechaPerdido) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
             .bind(l.id,s(l.nombre),s(l.tel),s(l.red),s(l.medio),s(l.vendedor),s(l.producto),n(l.monto),s(l.followup),s(l.stage,'lead'),s(l.obs),s(l.fecha),s(l.razon),s(l.proyecto),n(l.m2),s(l.finicio),s(l.moneda,'MXN'),n(l.tcLead,1),s(l.fechaPerdido)));
       }
-      if (vs?.length) {
+      if (vs !== undefined) {
         stmts.push(DB.prepare('DELETE FROM ventas'));
+        stmts.push(DB.prepare('DELETE FROM pagos'));
         for (const v of vs)
           stmts.push(DB.prepare(`INSERT INTO ventas (id,fecha,cliente,vendedor,producto,lista,moneda,tc,total,totalMxn,cobrado,cobradoMxn,pedido,metodo,notas,comision,razon,ref) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
             .bind(v.id,s(v.fecha),s(v.cliente),s(v.vendedor),s(v.producto),s(v.lista,'l1'),s(v.moneda,'MXN'),n(v.tc,1),n(v.total),n(v.totalMxn??v.total),n(v.cobrado),n(v.cobradoMxn??v.cobrado),s(v.pedido),s(v.metodo),s(v.notas),n(v.comision),s(v.razon),s(v.ref)));
