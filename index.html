@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1e1b4b">
 <title>CRM Showroom Interlomas</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -317,6 +318,93 @@ textarea.fc{resize:vertical;min-height:70px}
   th,td{padding:4px 5px;font-size:9px}
   #global-search{display:none}
   .kgrid{gap:6px}
+}
+
+/* ═══ REFRESH VISUAL 2026 ═══ */
+:root{--brand:#4f46e5;--brand-2:#7c3aed;--brand-soft:#eef2ff;--ink:#0f172a;--mut:#64748b;--line:#e5e9f2;--bg:#f4f6fb;--shadow-sm:0 1px 2px rgba(15,23,42,.05),0 1px 3px rgba(15,23,42,.04);--shadow-md:0 4px 14px rgba(15,23,42,.08);--shadow-lg:0 18px 50px rgba(15,23,42,.18)}
+body{background:var(--bg);color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased}
+.sidebar{background:linear-gradient(180deg,#0f172a 0%,#1e1b4b 100%);border-right:none;width:240px}
+.sidebar .logo{border-bottom:1px solid rgba(255,255,255,.08)}
+.sidebar .logo-name{color:#fff;font-size:15px}
+.sidebar .logo-sub{color:#a5b4fc}
+.logo-ico{background:linear-gradient(135deg,var(--brand),var(--brand-2));box-shadow:0 4px 12px rgba(79,70,229,.45);width:34px;height:34px}
+.nav-sec{color:#818cf8;padding:16px 16px 6px}
+.ni{color:#c7d2fe;font-size:13px;padding:10px 12px;margin:2px 10px;border-radius:10px;position:relative}
+.ni:hover{background:rgba(255,255,255,.08);color:#fff;transform:translateX(2px)}
+.ni.on{background:rgba(129,140,248,.2);color:#fff;box-shadow:inset 3px 0 0 #818cf8}
+.sidebar .btn-add{background:linear-gradient(135deg,var(--brand),var(--brand-2));box-shadow:0 4px 12px rgba(79,70,229,.4);border-radius:10px;padding:11px;font-size:13px}
+.sidebar .btn-add:hover{transform:translateY(-1px);filter:brightness(1.08)}
+.sidebar .user-sec{border-top:1px solid rgba(255,255,255,.08)}
+.sidebar #session-name{color:#fff!important}
+.sidebar .ulabel{color:#818cf8}
+.sidebar .btn-out{background:rgba(255,255,255,.08);color:#e0e7ff;border-color:rgba(255,255,255,.14)}
+.sidebar .btn-out:hover{background:rgba(255,255,255,.16)}
+.topbar{background:rgba(255,255,255,.85);backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--line);padding:14px 28px}
+.tbar-title{font-size:20px;letter-spacing:-.02em}
+.content{padding:26px 28px;max-width:1500px;width:100%}
+.page.on{animation:pgin .28s ease both}
+@keyframes pgin{from{opacity:0;transform:translateY(8px)}}
+.btn{border-radius:10px;padding:8px 16px;font-size:13px;box-shadow:var(--shadow-sm)}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.btn:active{transform:translateY(0)}
+.btn-blue{background:linear-gradient(135deg,var(--brand),var(--brand-2))}
+.btn-blue:hover{background:linear-gradient(135deg,#4338ca,#6d28d9)}
+.btn-out:hover{background:var(--brand-soft);border-color:#c7d2fe}
+.kc,.panel,.twrap,.fuc,.vcc{border-color:var(--line);border-radius:16px;box-shadow:var(--shadow-sm);transition:box-shadow .2s,transform .2s}
+.kc:hover,.fuc:hover,.vcc:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.kc{padding:20px 22px}
+.kc::before{height:4px;border-radius:16px 16px 0 0}
+.kc .kv{font-size:28px;letter-spacing:-.02em}
+.kc .kl{font-size:11px}
+.sh-t{font-size:16px;letter-spacing:-.01em}
+.sh{margin-bottom:16px}
+.kcol{border-radius:16px;background:#eef1f8}
+.kcard{border-radius:12px;box-shadow:var(--shadow-sm)}
+.kcard:hover{border-color:#a5b4fc;box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.kc-a{color:var(--brand)}
+thead th,.etable th{background:#f8f9fd}
+tbody tr{transition:background .12s}
+tbody tr:hover{background:var(--brand-soft)}
+td{padding:12px 14px;font-size:13px}
+.pill,.tag{letter-spacing:.01em}
+.cfil,.pfill{background-image:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.25))}
+.ctrk{height:10px}
+.modal{border-radius:20px;box-shadow:var(--shadow-lg);border:none}
+.mh{padding:20px 24px 16px}
+.mh-t{font-size:17px}
+.mb{padding:20px 24px}
+.fc{border-radius:10px;padding:10px 12px;font-size:14px;border-color:#d8dee9}
+.fc:focus{border-color:var(--brand);box-shadow:0 0 0 4px rgba(79,70,229,.14)}
+.fl{font-size:12px}
+.tab.on{color:var(--brand);border-bottom-color:var(--brand)}
+.uc.on,.uc:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-soft)}
+.srch:focus{border-color:var(--brand);box-shadow:0 0 0 4px rgba(79,70,229,.12)}
+.dropz:hover,.dropz.drag{border-color:var(--brand);background:var(--brand-soft)}
+.ibox{border-radius:12px}.wbox{border-radius:12px}
+#float-venta button{border-radius:999px!important;box-shadow:0 8px 24px rgba(34,197,94,.4)!important}
+@media(min-width:1000px){.kgrid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:1500px){.kgrid{grid-template-columns:repeat(6,1fr)}}
+@media(max-width:480px){.kgrid{grid-template-columns:1fr 1fr!important}.kc .kv{font-size:18px}}
+/* Accesibilidad */
+:focus-visible{outline:3px solid #a5b4fc;outline-offset:2px;border-radius:8px}
+.ni:focus-visible,.mobi:focus-visible{outline-color:#fff}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+/* Toasts */
+#toasts{position:fixed;top:18px;right:18px;z-index:1000;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.toast{pointer-events:auto;display:flex;align-items:center;gap:10px;max-width:360px;padding:13px 16px;border-radius:12px;background:#0f172a;color:#fff;font-size:13px;font-weight:600;box-shadow:var(--shadow-lg);animation:tin .25s ease both;border-left:4px solid #818cf8}
+.toast.ok{border-left-color:#22c55e}.toast.err{border-left-color:#ef4444}
+.toast.out{animation:tout .25s ease both}
+@keyframes tin{from{opacity:0;transform:translateX(24px)}}
+@keyframes tout{to{opacity:0;transform:translateX(24px)}}
+/* Estado vacío */
+.empty-state{text-align:center;padding:28px 16px;color:var(--mut);font-size:13px}
+.empty-state b{display:block;font-size:30px;margin-bottom:6px}
+@media(max-width:768px){
+  .topbar{padding:10px 12px}.tbar-title{font-size:16px}.content{padding:12px 12px 84px}
+  .kc .kv{font-size:20px}.kc{padding:14px}
+  .mobnav{box-shadow:0 -4px 20px rgba(15,23,42,.08);border-top:none}
+  .mobi{min-width:48px;min-height:44px;justify-content:center}.mobi.on{color:var(--brand)}
+  #toasts{left:12px;right:12px;top:12px}.toast{max-width:none}
 }
 </style>
 </head>
@@ -3412,6 +3500,41 @@ document.addEventListener('click',function(e){
 });
 
 initApp();
+
+// ═══ UX: toasts, cierre de modales con Esc/clic fuera, accesibilidad ═══
+(function(){
+  var box=document.createElement('div');box.id='toasts';box.setAttribute('role','status');box.setAttribute('aria-live','polite');
+  document.body.appendChild(box);
+  window.toast=function(msg,type){
+    var t=document.createElement('div');t.className='toast '+(type||'');
+    t.textContent=(type==='ok'?'✅ ':type==='err'?'⚠️ ':'')+msg;box.appendChild(t);
+    setTimeout(function(){t.classList.add('out');setTimeout(function(){t.remove()},260)},3600);
+  };
+  window.alert=function(m){window.toast(String(m),'err')};
+  document.addEventListener('keydown',function(e){
+    if(e.key!=='Escape')return;
+    var m=document.querySelector('.backdrop.open');
+    if(m&&m.id){closeM(m.id)}
+  });
+  document.addEventListener('mousedown',function(e){
+    if(e.target.classList&&e.target.classList.contains('backdrop')&&e.target.classList.contains('open')&&e.target.id)closeM(e.target.id);
+  });
+  // Elementos clicables de navegación accesibles por teclado
+  function a11y(){
+    document.querySelectorAll('.ni,.mobi,.uc,.kcard,.fuc').forEach(function(el){
+      if(!el.hasAttribute('tabindex')){el.setAttribute('tabindex','0');el.setAttribute('role','button')}
+    });
+  }
+  document.addEventListener('keydown',function(e){
+    if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.ni,.mobi,.uc,.kcard,.fuc')){e.preventDefault();e.target.click()}
+  });
+  a11y();new MutationObserver(a11y).observe(document.body,{childList:true,subtree:true});
+  // Atajo: "/" enfoca la búsqueda
+  document.addEventListener('keydown',function(e){
+    if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){e.preventDefault();var s=document.getElementById('global-search');if(s)s.focus()}
+  });
+  var gs=document.getElementById('global-search');if(gs)gs.placeholder='Buscar cliente, venta, pedido…  ( / )';
+})();
 </script>
 </body>
 </html>
