@@ -1067,9 +1067,10 @@ textarea.fc{resize:vertical;min-height:70px}
                  background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;
                  padding:12px;color:#1a2332;resize:none;outline:none;line-height:1.5"></textarea>
       </div>
-      <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
-        <button class="btn btn-blue" onclick="copyBackup()" id="btn-copy">📋 Copiar todo</button>
-        <span id="copy-ok" style="font-size:12px;color:#16a34a;display:none">✅ Copiado al portapapeles</span>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn btn-blue" onclick="downloadBackup()">⬇️ Descargar archivo</button>
+        <button class="btn btn-out" onclick="copyBackup()" id="btn-copy">📋 Copiar</button>
+        <span id="copy-ok" style="font-size:12px;color:#16a34a;display:none">✅ Copiado</span>
       </div>
     </div>
     <div class="mf">
@@ -1099,7 +1100,7 @@ textarea.fc{resize:vertical;min-height:70px}
     <div class="mb">
       <div style="background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:14px 16px;margin-bottom:14px">
         <div style="font-size:14px;font-weight:700;color:#dc2626;margin-bottom:6px">⚠️ Esta acción no se puede deshacer</div>
-        <div style="font-size:12px;color:#7f1d1d">Se borrarán todos los prospectos, ventas, cobros y configuraciones. Los datos de ejemplo volverán a aparecer.</div>
+        <div style="font-size:12px;color:#7f1d1d">Se borrarán todos los prospectos, ventas y cobros de la base de datos. Esta acción afecta a todos los usuarios.</div>
       </div>
       <div style="font-size:13px;color:#475569">Antes de continuar, descarga un backup con el botón 💾 para no perder tus datos.</div>
     </div>
@@ -1155,11 +1156,11 @@ const LS = {
   KEYS: {}, // not used — kept for compatibility
 
   export() {
-    const data = { prods:PRODS, vendors:VENDORS, leads, ventas, log:loadLog, activity:activity.slice(0,50) };
+    const data = { prods:PRODS, vendors:VENDORS, leads, ventas, pagos, log:loadLog };
     const json = JSON.stringify(data, null, 2);
     document.getElementById('backup-text').value = json;
     document.getElementById('backup-count').textContent =
-      `${leads.length} prospectos · ${ventas.length} ventas · ${PRODS.length} productos`;
+      `${leads.length} prospectos · ${ventas.length} ventas · ${pagos.length} cobros · ${PRODS.length} productos`;
     openM('m-backup');
   },
 
@@ -2808,6 +2809,20 @@ function saveCobro(){
 }
 function openM(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden';}
 function closeM(id){document.getElementById(id).classList.remove('open');document.body.style.overflow='';}
+
+function downloadBackup() {
+  const data = { prods:PRODS, vendors:VENDORS, leads, ventas, pagos, log:loadLog };
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'crm-backup-' + new Date().toISOString().split('T')[0] + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 function copyBackup() {
   const ta = document.getElementById('backup-text');
