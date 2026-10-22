@@ -101,13 +101,17 @@ async function handlePost(action, data, DB) {
     case 'save_pago':
       await DB.prepare(`
         INSERT OR REPLACE INTO pagos
-          (id, ventaId, fecha, monto, montoMxn, moneda, tc, metodo, notas, comision)
-        VALUES (?,?,?,?,?,?,?,?,?,?)`)
+          (id, ventaId, fecha, monto, montoMxn, moneda, tc, metodo, notas, comision, referencia)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
         .bind(
           data.id, data.ventaId, s(data.fecha),
           n(data.monto), n(data.montoMxn ?? data.monto), s(data.moneda, 'MXN'),
-          n(data.tc, 1), s(data.metodo), s(data.notas), n(data.comision)
+          n(data.tc, 1), s(data.metodo), s(data.notas), n(data.comision), s(data.referencia)
         ).run();
+      return {};
+
+    case 'delete_pago':
+      await DB.prepare('DELETE FROM pagos WHERE id = ?').bind(data.id).run();
       return {};
 
     case 'delete_lead':
@@ -191,8 +195,8 @@ async function handlePost(action, data, DB) {
       if (data.pagos !== undefined) {
         if (vs === undefined) stmts.push(DB.prepare('DELETE FROM pagos'));
         for (const p of data.pagos)
-          stmts.push(DB.prepare(`INSERT INTO pagos (id,ventaId,fecha,monto,montoMxn,moneda,tc,metodo,notas,comision) VALUES (?,?,?,?,?,?,?,?,?,?)`)
-            .bind(p.id, p.ventaId, s(p.fecha), n(p.monto), n(p.montoMxn??p.monto), s(p.moneda,'MXN'), n(p.tc,1), s(p.metodo), s(p.notas), n(p.comision)));
+          stmts.push(DB.prepare(`INSERT INTO pagos (id,ventaId,fecha,monto,montoMxn,moneda,tc,metodo,notas,comision,referencia) VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
+            .bind(p.id, p.ventaId, s(p.fecha), n(p.monto), n(p.montoMxn??p.monto), s(p.moneda,'MXN'), n(p.tc,1), s(p.metodo), s(p.notas), n(p.comision), s(p.referencia)));
       }
 
       if (stmts.length) await DB.batch(stmts);
@@ -223,7 +227,8 @@ async function initDB(DB) {
     DB.prepare(`CREATE TABLE IF NOT EXISTS pagos (
       id INTEGER PRIMARY KEY AUTOINCREMENT, ventaId INTEGER, fecha TEXT,
       monto REAL DEFAULT 0, montoMxn REAL DEFAULT 0, moneda TEXT DEFAULT 'MXN',
-      tc REAL DEFAULT 1, metodo TEXT, notas TEXT, comision REAL DEFAULT 0)`),
+      tc REAL DEFAULT 1, metodo TEXT, notas TEXT, comision REAL DEFAULT 0,
+      referencia TEXT DEFAULT '')`),
     DB.prepare(`CREATE TABLE IF NOT EXISTS productos (
       id INTEGER PRIMARY KEY, name TEXT, rate REAL DEFAULT 3,
       price REAL DEFAULT 0, p_l1 REAL DEFAULT 0, p_l2 REAL DEFAULT 0,
@@ -244,6 +249,8 @@ async function initDB(DB) {
     DB.prepare(`INSERT OR IGNORE INTO pines (id, pin) VALUES ('v2','2222')`),
     DB.prepare(`INSERT OR IGNORE INTO pines (id, pin) VALUES ('v3','3333')`),
   ]);
+  // Migrate existing tables — ignore errors if column already exists
+  try { await DB.prepare(`ALTER TABLE pagos ADD COLUMN referencia TEXT DEFAULT ''`).run(); } catch(e) {}
 }
 
 // ── Helpers ───────────────────────────────────────────────

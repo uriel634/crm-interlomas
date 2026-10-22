@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS pagos (
   tc REAL DEFAULT 1,
   metodo TEXT DEFAULT '',
   notas TEXT DEFAULT '',
-  comision REAL DEFAULT 0
+  comision REAL DEFAULT 0,
+  referencia TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS productos (

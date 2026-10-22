@@ -1119,7 +1119,7 @@ let cobroId = null;
 let csvRows = [];
 let loadLog = [];
 let rowId = 0;
-let nLid = 10, nVid = 10;
+let nLid = 10, nVid = 10, nPid = 1000;
 
 // ═══════ PERSISTENCIA — Cloudflare D1 ═══════
 const API_URL = '/api';
@@ -1156,7 +1156,7 @@ const LS = {
   KEYS: {}, // not used — kept for compatibility
 
   export() {
-    const data = { prods:PRODS, vendors:VENDORS, leads, ventas, pagos, log:loadLog };
+    const data = { prods:PRODS, vendors:VENDORS, leads, ventas, pagos, activity, log:loadLog };
     const json = JSON.stringify(data, null, 2);
     document.getElementById('backup-text').value = json;
     document.getElementById('backup-count').textContent =
@@ -1177,7 +1177,7 @@ async function doClearData() {
 
   // STEP 1: Clear memory immediately
   leads=[]; ventas=[]; pagos=[]; activity=[]; loadLog=[];
-  nLid=1; nVid=1;
+  nLid=1; nVid=1; nPid=1000;
 
   // STEP 2: Set flag so initApp won't reload on next run
   try { sessionStorage.setItem('crm_cleared','1'); } catch(e){}
@@ -1224,8 +1224,9 @@ async function importBackupFile(file) {
       if (data.pagos)    pagos   = data.pagos;
       if (data.log)      loadLog = data.log;
       if (data.activity) activity= data.activity;
-      if (leads.length)  nLid = Math.max(...leads.map(function(l){return l.id;})) + 1;
-      if (ventas.length) nVid = Math.max(...ventas.map(function(v){return v.id;})) + 1;
+      if (leads.length)  nLid = Math.max(...leads.map(function(l){return parseInt(l.id)||0;})) + 1;
+      if (ventas.length) nVid = Math.max(...ventas.map(function(v){return parseInt(v.id)||0;})) + 1;
+      if (pagos.length)  nPid = Math.max(...pagos.map(function(p){return parseInt(p.id)||0;})) + 1;
       // Rebuild pagos from venta.cobrado if backup has no pagos
       if((!data.pagos||!data.pagos.length) && ventas.length > 0){
         rebuildPagosFromVentas();
@@ -1259,7 +1260,8 @@ async function syncPago(pago) {
       id: pago.id, ventaId: pago.ventaId, fecha: pago.fecha,
       monto: pago.monto||0, montoMxn: pago.montoMxn||pago.monto||0,
       moneda: pago.moneda||'MXN', tc: pago.tc||1,
-      metodo: pago.metodo||'', notas: pago.notas||'', comision: pago.comision||0
+      metodo: pago.metodo||'', notas: pago.notas||'', comision: pago.comision||0,
+      referencia: pago.referencia||''
     });
   } catch(e) { setStatus('⚠️ Sin conexión — cobro en memoria', '#f59e0b'); }
 }
@@ -1321,6 +1323,7 @@ const DEFAULT_PRODS = [
 ];
 // Commission rates per price list
 let LISTA_RATES = { l1:5.0, l2:4.0, l3:3.0 };
+try { const _r = localStorage.getItem('crm_lista_rates'); if (_r) Object.assign(LISTA_RATES, JSON.parse(_r)); } catch(e) {}
 
 // Commission formula: (cobrado / 1.16) × tasa_lista%
 // Rate comes from LISTA_RATES[lista], NOT from product
@@ -1413,7 +1416,7 @@ function rebuildPagosFromVentas(){
       var rate  = (LISTA_RATES&&LISTA_RATES[lista])||5;
       var com   = v.comision>0 ? parseFloat(v.comision) : Math.round((cobMxn/1.16)*(rate/100));
       newPagos.push({
-        id:         'leg_'+v.id,
+        id:         parseInt(v.id),
         ventaId:    v.id,
         fecha:      v.fecha||today(),
         monto:      parseFloat(v.cobrado||cobMxn),
@@ -2132,7 +2135,7 @@ async function savePins() {
 
   setStatus('⏳ Guardando PINs…', '#f59e0b');
   try {
-    await apiPost('save_pins', { pins });
+    await apiPost('save_pins', { pins: Object.fromEntries(pins.map(p=>[p.id, p.pin])) });
     setStatus('✅ PINs actualizados de forma segura', '#22c55e');
     document.querySelectorAll('[id^="pin-new-"]').forEach(el => el.value = '');
     const msg = document.getElementById('save-ok');
@@ -2317,8 +2320,8 @@ function saveListaRates(){
   LISTA_RATES.l1 = parseFloat(document.getElementById('rate-l1')?.value)||5.0;
   LISTA_RATES.l2 = parseFloat(document.getElementById('rate-l2')?.value)||4.0;
   LISTA_RATES.l3 = parseFloat(document.getElementById('rate-l3')?.value)||3.0;
+  try { localStorage.setItem('crm_lista_rates', JSON.stringify(LISTA_RATES)); } catch(e) {}
   setStatus('✅ Tasas de comisión actualizadas','#22c55e');
-  // Persist via save_vendedores endpoint
   syncVendedores();
   const msg=document.getElementById('save-ok');
   if(msg){msg.textContent='✅ Tasas guardadas';msg.style.display='block';setTimeout(()=>{msg.style.display='none';msg.textContent='✅ Cambios guardados';},2500);}
@@ -2402,15 +2405,24 @@ function parseCSV(txt){
 function importCSV(){
   if(!csvRows.length)return;
   const imp=csvRows.map(r=>{
-    const tot=parseFloat(r.total)||0,cob=parseFloat(r.cobrado)||0,rate=pRate(r.producto);
-    return{id:nVid++,fecha:r.fecha,cliente:r.cliente,vendedor:r.vendedor,producto:r.producto,lista:r.lista||'l1',moneda:r.moneda||'MXN',total:tot,totalMxn:tot,cobrado:cob,cobradoMxn:cob,pedido:r.pedido||('PED-'+String(nVid).padStart(3,'0')),metodo:r.metodo||'Transferencia',notas:r.notas||'',comision:calcComision(cob||tot,r.lista||'l1')};
+    const tot=parseFloat(r.total)||0,cob=parseFloat(r.cobrado)||0;
+    const vid=nVid++;
+    return{id:vid,fecha:r.fecha,cliente:r.cliente,vendedor:r.vendedor,producto:r.producto,lista:r.lista||'l1',moneda:r.moneda||'MXN',tc:parseFloat(r.tc)||1,total:tot,totalMxn:tot,cobrado:cob,cobradoMxn:cob,pedido:r.pedido||('PED-'+String(vid).padStart(3,'0')),metodo:r.metodo||'Transferencia',notas:r.notas||'',comision:calcComision(cob||tot,r.lista||'l1'),razon:'',ref:''};
   });
   ventas.push(...imp);
+  // Create pagos for ventas with cobrado > 0
+  const impPagos=imp.filter(v=>(v.cobrado||0)>0).map(v=>({
+    id:++nPid, ventaId:v.id, fecha:v.fecha,
+    monto:v.cobrado, montoMxn:v.cobradoMxn||v.cobrado,
+    moneda:v.moneda||'MXN', tc:v.tc||1,
+    metodo:v.metodo||'', notas:'', comision:v.comision||0, referencia:''
+  }));
+  pagos.push(...impPagos);
   const tm=imp.reduce((s,v)=>s+v.total,0);
   loadLog.unshift({fecha:new Date().toLocaleDateString('es-MX'),usuario:'Capturista',registros:imp.length,monto:tm,estado:'✅ OK'});
   activity.unshift({text:`Carga CSV — <strong>${imp.length} ventas</strong> importadas`,time:'Ahora',color:'#14b8a6'});
   setStatus('⏳ Guardando en la nube…','#f59e0b');
-  Promise.all(imp.map(v=>syncVenta(v)))
+  Promise.all([...imp.map(v=>syncVenta(v)), ...impPagos.map(p=>syncPago(p))])
     .then(()=>setStatus(`✅ ${imp.length} ventas importadas`,'#22c55e'));
   showRes('ok',`✅ ${imp.length} ventas importadas. Total: ${f$(tm)}`);
   clearCSV();rLog();badges();
@@ -2460,17 +2472,26 @@ function loadManual(){
     if(!cli||!tot)return;
     const prod=document.getElementById('mr-p-'+id)?.value;
     const cob=parseFloat(document.getElementById('mr-cb-'+id)?.value)||0;
-    const nv={id:nVid++,fecha:el.value,cliente:cli,vendedor:document.getElementById('mr-v-'+id)?.value,producto:prod,lista:'l1',moneda:'MXN',total:tot,totalMxn:tot,cobrado:cob,cobradoMxn:cob,pedido:'PED-'+String(nVid).padStart(3,'0'),metodo:'Transferencia',notas:'',comision:calcComision(cob||tot,'l1')};
+    const vid=nVid++;
+    const nv={id:vid,fecha:el.value,cliente:cli,vendedor:document.getElementById('mr-v-'+id)?.value,producto:prod,lista:'l1',moneda:'MXN',tc:1,total:tot,totalMxn:tot,cobrado:cob,cobradoMxn:cob,pedido:'PED-'+String(vid).padStart(3,'0'),metodo:'Transferencia',notas:'',comision:calcComision(cob||tot,'l1'),razon:'',ref:''};
     ventas.push(nv);
     newVentas.push(nv);
     loaded++;
   });
   if(loaded){
+    // Create pagos for ventas with cobrado > 0
+    const manPagos=newVentas.filter(v=>(v.cobrado||0)>0).map(v=>({
+      id:++nPid, ventaId:v.id, fecha:v.fecha,
+      monto:v.cobrado, montoMxn:v.cobradoMxn||v.cobrado,
+      moneda:'MXN', tc:1,
+      metodo:'Transferencia', notas:'', comision:v.comision||0, referencia:''
+    }));
+    pagos.push(...manPagos);
     document.getElementById('manual-rows').innerHTML='';
     loadLog.unshift({fecha:new Date().toLocaleDateString('es-MX'),usuario:'Capturista',registros:loaded,monto:0,estado:'✅ OK'});
     activity.unshift({text:`Carga manual — <strong>${loaded} ventas</strong> ingresadas`,time:'Ahora',color:'#14b8a6'});
     setStatus('⏳ Guardando '+loaded+' ventas…','#f59e0b');
-    Promise.all(newVentas.map(v=>syncVenta(v)))
+    Promise.all([...newVentas.map(v=>syncVenta(v)), ...manPagos.map(p=>syncPago(p))])
       .then(()=>{
         syncActivity({fecha:today(),texto:`Carga manual — ${loaded} ventas`,color:'#14b8a6'});
         setStatus('✅ '+loaded+' ventas guardadas en la nube','#22c55e');
@@ -2752,9 +2773,12 @@ function saveVenta(){
     producto:prod, lista, moneda, tc, total:tot, totalMxn, cobrado:cob, cobradoMxn:cobMxn,
     pedido:document.getElementById('v-ped').value||('PED-'+String(vid).padStart(3,'0')),
     metodo:document.getElementById('v-met').value,
-    notas:document.getElementById('v-nota').value};
+    notas:document.getElementById('v-nota').value,
+    comision:calcComision(cobMxn||totalMxn, lista),
+    razon:document.getElementById('v-razon')?.value||'',
+    ref:document.getElementById('v-ref')?.value||document.getElementById('v-ref2')?.value||''};
   ventas.push(venta);
-  const newPago = cobMxn > 0 ? {id:Date.now(), ventaId:vid, fecha:venta.fecha,
+  const newPago = cobMxn > 0 ? {id:++nPid, ventaId:vid, fecha:venta.fecha,
     monto:cob, moneda, tc, montoMxn:cobMxn,
     metodo:venta.metodo,
     referencia:document.getElementById('v-ref')?.value||'',
@@ -2812,7 +2836,7 @@ function saveCobro(){
   const montoMxn = toMXN(monto, moneda, tc);
   const lista    = v.lista || 'l1';
   const com      = calcComision(montoMxn, lista);
-  const nuevoPago = {id:Date.now(), ventaId:cobroId,
+  const nuevoPago = {id:++nPid, ventaId:cobroId,
     fecha:      document.getElementById('cb-fec')?.value||today(),
     monto, moneda, tc, montoMxn,
     metodo:     document.getElementById('cb-met')?.value||'Transferencia',
@@ -2952,15 +2976,16 @@ async function initApp() {
     const all = await apiGet('all');
 
     // Always overwrite from D1 — including empty arrays (cleared state)
-    if (all.productos)  PRODS   = all.productos.length  ? all.productos.map(p=>({...p, rate:parseFloat(p.rate)||3, price:parseFloat(p.price)||0}))  : DEFAULT_PRODS;
+    if (all.productos)  PRODS   = all.productos.length  ? all.productos.map(p=>({...p, rate:parseFloat(p.rate)||3, price:parseFloat(p.price)||0, p_l1:parseFloat(p.p_l1)||0, p_l2:parseFloat(p.p_l2)||0, p_l3:parseFloat(p.p_l3)||0}))  : DEFAULT_PRODS;
     if (all.vendedores) VENDORS = all.vendedores.length ? all.vendedores.map(v=>({...v, cuota:parseFloat(v.cuota)||150000, bono:parseFloat(v.bono)||20})) : DEFAULT_VENDORS;
     leads   = all.prospectos ? all.prospectos.map(l=>({...l, monto:parseFloat(l.monto)||0, m2:parseFloat(l.m2)||0, tcLead:parseFloat(l.tcLead)||1, id:parseInt(l.id)||l.id})) : [];
     ventas  = all.ventas     ? all.ventas.map(v=>({...v, total:parseFloat(v.total)||0, totalMxn:parseFloat(v.totalMxn)||parseFloat(v.total)||0, cobrado:parseFloat(v.cobrado)||0, cobradoMxn:parseFloat(v.cobradoMxn)||parseFloat(v.cobrado)||0, tc:parseFloat(v.tc)||1, comision:parseFloat(v.comision)||0, id:parseInt(v.id)||v.id})) : [];
-    activity= all.actividad  ? all.actividad.map(a=>({text:a.texto, time:a.fecha, color:a.color})).reverse() : [];
+    activity= all.actividad  ? all.actividad.map(a=>({text:a.texto, time:a.fecha, color:a.color})) : [];
     pagos   = all.pagos      ? all.pagos.map(p=>({...p, monto:parseFloat(p.monto)||0, montoMxn:parseFloat(p.montoMxn)||parseFloat(p.monto)||0, tc:parseFloat(p.tc)||1, comision:parseFloat(p.comision)||0})) : [];
 
     if(leads.length)  nLid = Math.max(...leads.map(l=>parseInt(l.id)||0)) + 1;
     if(ventas.length) nVid = Math.max(...ventas.map(v=>parseInt(v.id)||0)) + 1;
+    if(pagos.length)  nPid = Math.max(...pagos.map(p=>parseInt(p.id)||0)) + 1;
     // Fall back to rebuilding pagos from venta.cobrado only if D1 has none
     if(pagos.length === 0 && ventas.length > 0){ rebuildPagosFromVentas(); }
 
@@ -3380,7 +3405,7 @@ function updateLead(id){
   l.medio    = document.getElementById('l-med').value;
   l.vendedor = document.getElementById('l-vend').value;
   l.producto = document.getElementById('l-prod').value;
-  l.monto=monto; l.montoMxn=toMXN(monto,moneda,tcLead); l.moneda=moneda; l.tc=tcLead;
+  l.monto=monto; l.moneda=moneda; l.tcLead=tcLead; delete l.montoMxn; delete l.tc;
   l.obs      = document.getElementById('l-obs').value;
   l.proyecto = (document.getElementById('l-proyecto')&&document.getElementById('l-proyecto').value)||'';
   l.m2       = parseFloat((document.getElementById('l-m2')&&document.getElementById('l-m2').value))||0;
@@ -3503,6 +3528,15 @@ function savePagoEdit(pagoId,ventaId,leadId){
   p.metodo    = document.getElementById('ep-met').value;
   p.referencia= document.getElementById('ep-ref').value;
   p.comision  = calcComision(montoMxn,v.lista||'l1');
+  // Recalculate venta cobrado totals and sync both to D1
+  syncPago(p);
+  var vFull = ventas.find(function(x){return x.id===ventaId;});
+  if(vFull){
+    var pvs=pagos.filter(function(q){return q.ventaId===vFull.id;});
+    vFull.cobrado=pvs.reduce(function(s,q){return s+(q.monto||0);},0);
+    vFull.cobradoMxn=pvs.reduce(function(s,q){return s+(q.montoMxn||0);},0);
+    syncVenta(vFull);
+  }
   setStatus('✅ Cobro actualizado','#22c55e');
   activity.unshift({text:'Cobro editado: <strong>'+(v.cliente||'')+'</strong> — '+f$(montoMxn),time:'Ahora',color:'#8b5cf6'});
   document.getElementById('edit-pago-overlay').remove();
@@ -3511,9 +3545,21 @@ function savePagoEdit(pagoId,ventaId,leadId){
   if(leadId&&leadId!=='null')setTimeout(function(){openDet(leadId);},150);
 }
 
-function deletePago(pagoId,leadId){
+async function deletePago(pagoId,leadId){
   if(!confirm('¿Eliminar este cobro? La comisión se ajustará.'))return;
+  const pago = pagos.find(function(p){return String(p.id)===String(pagoId);});
   pagos=pagos.filter(function(p){return String(p.id)!==String(pagoId);});
+  // Recalculate venta cobrado totals
+  if(pago){
+    var v=ventas.find(function(x){return x.id===pago.ventaId;});
+    if(v){
+      var pvs=pagos.filter(function(p){return p.ventaId===v.id;});
+      v.cobrado=pvs.reduce(function(s,p){return s+(p.monto||0);},0);
+      v.cobradoMxn=pvs.reduce(function(s,p){return s+(p.montoMxn||0);},0);
+      syncVenta(v);
+    }
+  }
+  apiPost('delete_pago', {id:pagoId}).catch(function(e){console.warn('delete_pago failed',e);});
   setStatus('✅ Cobro eliminado','#22c55e');
   var ol=document.getElementById('edit-pago-overlay');if(ol)ol.remove();
   if(typeof rVentas==='function')rVentas();
