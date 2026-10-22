@@ -1068,8 +1068,8 @@ textarea.fc{resize:vertical;min-height:70px}
                  padding:12px;color:#1a2332;resize:none;outline:none;line-height:1.5"></textarea>
       </div>
       <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap">
-        <button class="btn btn-blue" onclick="downloadBackup()">⬇️ Descargar archivo</button>
-        <button class="btn btn-out" onclick="copyBackup()" id="btn-copy">📋 Copiar</button>
+        <button class="btn btn-blue" onclick="downloadExcel()">⬇️ Descargar Excel</button>
+        <button class="btn btn-out" onclick="copyBackup()" id="btn-copy">📋 Copiar JSON</button>
         <span id="copy-ok" style="font-size:12px;color:#16a34a;display:none">✅ Copiado</span>
       </div>
     </div>
@@ -2810,18 +2810,60 @@ function saveCobro(){
 function openM(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden';}
 function closeM(id){document.getElementById(id).classList.remove('open');document.body.style.overflow='';}
 
-function downloadBackup() {
-  const data = { prods:PRODS, vendors:VENDORS, leads, ventas, pagos, log:loadLog };
-  const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'crm-backup-' + new Date().toISOString().split('T')[0] + '.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+async function downloadExcel() {
+  const btn = document.querySelector('[onclick="downloadExcel()"]');
+  if (btn) { btn.textContent = '⏳ Generando…'; btn.disabled = true; }
+  try {
+    if (!window.XLSX) {
+      await new Promise((res, rej) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+      });
+    }
+    const wb = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(leads.map(l => ({
+      'ID':l.id,'Nombre':l.nombre,'Teléfono':l.tel,'Red':l.red||'',
+      'Medio':l.medio,'Vendedor':l.vendedor,'Producto':l.producto||'',
+      'Monto':l.monto||0,'Etapa':l.stage,'Seguimiento':l.followup||'',
+      'Fecha':l.fecha||'','Observaciones':l.obs||'','Proyecto':l.proyecto||'',
+      'M²':l.m2||0,'Fecha Inicio':l.finicio||'','Moneda':l.moneda||'MXN',
+      'TC':l.tcLead||1,'Razón Pérdida':l.razon||'','Fecha Perdido':l.fechaPerdido||''
+    }))), 'Prospectos');
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ventas.map(v => ({
+      'ID':v.id,'Fecha':v.fecha,'Cliente':v.cliente,'Vendedor':v.vendedor,
+      'Producto':v.producto,'Lista':v.lista||'l1','Moneda':v.moneda||'MXN','TC':v.tc||1,
+      'Total':v.total||0,'Total MXN':v.totalMxn||v.total||0,
+      'Cobrado':v.cobrado||0,'Cobrado MXN':v.cobradoMxn||v.cobrado||0,
+      'Pedido':v.pedido||'','Método':v.metodo||'','Notas':v.notas||'',
+      'Comisión':v.comision||0,'Ref':v.ref||''
+    }))), 'Ventas');
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pagos.map(p => ({
+      'ID':p.id,'Venta ID':p.ventaId,'Fecha':p.fecha,
+      'Monto':p.monto||0,'Moneda':p.moneda||'MXN','TC':p.tc||1,
+      'Monto MXN':p.montoMxn||p.monto||0,'Método':p.metodo||'',
+      'Notas':p.notas||'','Comisión':p.comision||0
+    }))), 'Cobros');
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(PRODS.map(p => ({
+      'ID':p.id,'Nombre':p.name,'Rate%':p.rate||3,'Precio':p.price||0,
+      'Lista 1':p.p_l1||0,'Lista 2':p.p_l2||0,'Lista 3':p.p_l3||0,'Unidad':p.unit||'m²'
+    }))), 'Productos');
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(VENDORS.map(v => ({
+      'ID':v.id,'Nombre':v.name,'Cuota':v.cuota||150000,'Bono%':v.bono||20
+    }))), 'Vendedores');
+
+    XLSX.writeFile(wb, 'crm-backup-' + new Date().toISOString().split('T')[0] + '.xlsx');
+  } catch(e) {
+    alert('Error al generar Excel: ' + e.message);
+  } finally {
+    if (btn) { btn.textContent = '⬇️ Descargar Excel'; btn.disabled = false; }
+  }
 }
 
 function copyBackup() {
