@@ -188,6 +188,12 @@ async function handlePost(action, data, DB) {
           stmts.push(DB.prepare(`INSERT INTO ventas (id,fecha,cliente,vendedor,producto,lista,moneda,tc,total,totalMxn,cobrado,cobradoMxn,pedido,metodo,notas,comision,razon,ref) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
             .bind(v.id,s(v.fecha),s(v.cliente),s(v.vendedor),s(v.producto),s(v.lista,'l1'),s(v.moneda,'MXN'),n(v.tc,1),n(v.total),n(v.totalMxn??v.total),n(v.cobrado),n(v.cobradoMxn??v.cobrado),s(v.pedido),s(v.metodo),s(v.notas),n(v.comision),s(v.razon),s(v.ref)));
       }
+      if (data.pagos !== undefined) {
+        if (vs === undefined) stmts.push(DB.prepare('DELETE FROM pagos'));
+        for (const p of data.pagos)
+          stmts.push(DB.prepare(`INSERT INTO pagos (id,ventaId,fecha,monto,montoMxn,moneda,tc,metodo,notas,comision) VALUES (?,?,?,?,?,?,?,?,?,?)`)
+            .bind(p.id, p.ventaId, s(p.fecha), n(p.monto), n(p.montoMxn??p.monto), s(p.moneda,'MXN'), n(p.tc,1), s(p.metodo), s(p.notas), n(p.comision)));
+      }
 
       if (stmts.length) await DB.batch(stmts);
       return {};

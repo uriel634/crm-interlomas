@@ -1221,6 +1221,7 @@ async function importBackupFile(file) {
       if (data.vendors)  VENDORS = data.vendors;
       if (data.leads)    leads   = data.leads;
       if (data.ventas)   ventas  = data.ventas;
+      if (data.pagos)    pagos   = data.pagos;
       if (data.log)      loadLog = data.log;
       if (data.activity) activity= data.activity;
       if (leads.length)  nLid = Math.max(...leads.map(function(l){return l.id;})) + 1;
@@ -1230,7 +1231,7 @@ async function importBackupFile(file) {
         rebuildPagosFromVentas();
       }
       setStatus('⏳ Subiendo backup a la nube…', '#f59e0b');
-      await apiPost('full_backup', { prospectos:leads, ventas:ventas, productos:PRODS, vendedores:VENDORS });
+      await apiPost('full_backup', { prospectos:leads, ventas:ventas, pagos:pagos, productos:PRODS, vendedores:VENDORS, activity:activity });
       fillSelects(); badges();
       render(document.querySelector('.page.on')?.id?.replace('page-','')||'dashboard');
       updateStorageStatus();
@@ -2317,7 +2318,7 @@ function saveListaRates(){
   LISTA_RATES.l2 = parseFloat(document.getElementById('rate-l2')?.value)||4.0;
   LISTA_RATES.l3 = parseFloat(document.getElementById('rate-l3')?.value)||3.0;
   setStatus('✅ Tasas de comisión actualizadas','#22c55e');
-  // Save to vendedores sheet as extra config (reuse save endpoint)
+  // Persist via save_vendedores endpoint
   syncVendedores();
   const msg=document.getElementById('save-ok');
   if(msg){msg.textContent='✅ Tasas guardadas';msg.style.display='block';setTimeout(()=>{msg.style.display='none';msg.textContent='✅ Cambios guardados';},2500);}
