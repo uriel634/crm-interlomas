@@ -1,8 +1,7 @@
-name = "crm-eurofloors"
+name = "crm-interlomas"
 compatibility_date = "2024-09-23"
 
-# D1 database — reemplaza database_id con el ID real de tu D1
-# Lo obtienes en: Cloudflare Dashboard → Workers & Pages → D1 → crm-eurofloors
+# D1 database
 [[d1_databases]]
 binding = "DB"
 database_name = "crm-eurofloors"
